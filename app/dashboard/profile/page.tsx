@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { User, LogOut, BookOpen } from 'lucide-react'
+import { User, BookOpen } from 'lucide-react'
 import { LogoutButton } from '@/components/logout-button'
+import { ApiKeyManager } from '@/components/api-key-manager'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -14,6 +15,15 @@ export default async function ProfilePage() {
     .join('')
     .toUpperCase()
     .slice(0, 2)
+
+  // Get profile with API key
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('gemini_api_key')
+    .eq('id', user?.id)
+    .single()
+
+  const hasApiKey = !!profile?.gemini_api_key
 
   return (
     <main className="min-h-screen">
@@ -29,7 +39,7 @@ export default async function ProfilePage() {
         </div>
       </header>
 
-      <div className="px-4 space-y-6 pb-6">
+      <div className="px-4 space-y-6 pb-24">
         {/* Profile Card */}
         <div className="p-6 rounded-2xl bg-card border border-border text-center">
           <div className="w-20 h-20 rounded-full bg-primary mx-auto mb-4 flex items-center justify-center">
@@ -40,6 +50,9 @@ export default async function ProfilePage() {
           <h2 className="text-xl font-semibold text-foreground">{fullName}</h2>
           <p className="text-muted-foreground mt-1">{email}</p>
         </div>
+
+        {/* API Key Manager */}
+        <ApiKeyManager hasApiKey={hasApiKey} />
 
         {/* App Info */}
         <div className="p-4 rounded-2xl bg-card border border-border">
