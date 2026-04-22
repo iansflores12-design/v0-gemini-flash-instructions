@@ -5,24 +5,28 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export async function POST(request: Request) {
   try {
-    const { text } = await request.json()
+    const formData = await request.formData()
+    const file = formData.get('pdf') as File | null
     
-    if (!text) {
-      return NextResponse.json({ error: 'No text provided' }, { status: 400 })
+    if (!file) {
+      return NextResponse.json({ error: 'No PDF file provided' }, { status: 400 })
+    }
+
+    if (file.type !== 'application/pdf') {
+      return NextResponse.json({ error: 'File must be a PDF' }, { status: 400 })
     }
 
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
     }
 
+    // Convert file to base64
+    const bytes = await file.arrayBuffer()
+    const base64 = Buffer.from(bytes).toString('base64')
+
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
     
-    const prompt = `Analiza el siguiente texto de una agenda escolar o lista de tareas y extrae la información estructurada.
-
-TEXTO A ANALIZAR:
-"""
-${text}
-"""
+    const prompt = `Analiza este documento PDF de una agenda escolar o lista de tareas y extrae la información estructurada.
 
 Responde ÚNICAMENTE con un JSON válido (sin markdown, sin backticks) con este formato exacto:
 {
@@ -45,7 +49,16 @@ Reglas:
 - Si no hay materiales mencionados, deja el array vacío
 - Responde SOLO con el JSON, sin explicaciones adicionales`
 
-    const result = await model.generateContent(prompt)
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          mimeType: 'application/pdf',
+          data: base64
+        }
+      }
+    ])
+    
     const response = await result.response
     const responseText = response.text()
     
@@ -65,9 +78,9 @@ Reglas:
     
     return NextResponse.json(parsed)
   } catch (error) {
-    console.error('Error parsing agenda:', error)
+    console.error('Error parsing PDF:', error)
     return NextResponse.json(
-      { error: 'Failed to parse agenda text' },
+      { error: 'Failed to parse PDF' },
       { status: 500 }
     )
   }
