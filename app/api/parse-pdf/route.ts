@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     // Get user's API key from their profile
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    
+
     if (!user) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
     }
@@ -21,14 +21,14 @@ export async function POST(request: Request) {
     const apiKey = profile?.gemini_api_key
 
     if (!apiKey) {
-      return NextResponse.json({ 
-        error: 'No tienes una clave API de Gemini configurada. Ve a tu perfil para agregarla.' 
+      return NextResponse.json({
+        error: 'No tienes una clave API de Gemini configurada. Ve a tu perfil para agregarla.'
       }, { status: 400 })
     }
 
     const formData = await request.formData()
     const file = formData.get('pdf') as File | null
-    
+
     if (!file) {
       return NextResponse.json({ error: 'No se proporciono archivo PDF' }, { status: 400 })
     }
@@ -42,10 +42,11 @@ export async function POST(request: Request) {
 
     // Convert file to base64
     const bytes = await file.arrayBuffer()
-    const base64 = Buffer.from(bytes).toString('base64')
+    // ✅ Compatible con edge runtime
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes)))
 
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
-    
+
     const prompt = `Analiza este documento PDF de una agenda escolar o lista de tareas y extrae la información estructurada.
 
 Responde ÚNICAMENTE con un JSON válido (sin markdown, sin backticks) con este formato exacto:
@@ -78,10 +79,10 @@ Reglas:
         }
       }
     ])
-    
+
     const response = await result.response
     const responseText = response.text()
-    
+
     // Clean the response - remove markdown code blocks if present
     let cleanedText = responseText.trim()
     if (cleanedText.startsWith('```json')) {
@@ -93,13 +94,13 @@ Reglas:
       cleanedText = cleanedText.slice(0, -3)
     }
     cleanedText = cleanedText.trim()
-    
+
     const parsed = JSON.parse(cleanedText)
-    
+
     return NextResponse.json(parsed)
   } catch (error) {
     console.error('Error parsing PDF:', error)
-    
+
     // Check if it's an API key error
     if (error instanceof Error && error.message.includes('API_KEY')) {
       return NextResponse.json(
@@ -107,7 +108,7 @@ Reglas:
         { status: 400 }
       )
     }
-    
+
     return NextResponse.json(
       { error: 'Error al procesar el PDF. Intenta de nuevo.' },
       { status: 500 }
