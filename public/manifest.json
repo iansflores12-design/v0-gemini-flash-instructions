@@ -1,0 +1,24 @@
+{
+  "name": "StudyFlow",
+  "short_name": "StudyFlow",
+  "description": "Tu asistente de estudio inteligente",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#F7F5FF",
+  "theme_color": "#6750A4",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

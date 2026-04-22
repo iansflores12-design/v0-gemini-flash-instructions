@@ -1,0 +1,47 @@
+import { createClient } from '@/lib/supabase/server'
+import { getTasks, getSubjects } from '@/lib/actions'
+import { DashboardHeader } from '@/components/dashboard-header'
+import { AgendaInput } from '@/components/agenda-input'
+import { TaskList } from '@/components/task-list'
+import { QuickStats } from '@/components/quick-stats'
+
+export default async function DashboardPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  const [tasks, subjects] = await Promise.all([
+    getTasks(),
+    getSubjects()
+  ])
+
+  const pendingTasks = tasks.filter(t => !t.is_done)
+  const todayTasks = pendingTasks.filter(t => {
+    const today = new Date().toISOString().split('T')[0]
+    return t.due_date === today
+  })
+
+  return (
+    <main className="min-h-screen">
+      <DashboardHeader 
+        userName={user?.user_metadata?.full_name || 'Estudiante'} 
+      />
+      
+      <div className="px-4 space-y-6 pb-6">
+        <QuickStats 
+          totalPending={pendingTasks.length}
+          todayCount={todayTasks.length}
+          subjectsCount={subjects.length}
+        />
+        
+        <AgendaInput subjects={subjects} />
+        
+        <section>
+          <h2 className="text-lg font-semibold text-foreground mb-3">
+            Proximas tareas
+          </h2>
+          <TaskList tasks={pendingTasks.slice(0, 5)} showViewAll />
+        </section>
+      </div>
+    </main>
+  )
+}
