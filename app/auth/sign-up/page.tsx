@@ -54,7 +54,7 @@ export default function SignUpPage() {
         .eq('id', data.user.id)
 
       if (updateError) {
-        console.log('[v0] Error saving API key to profile:', updateError.message)
+        console.log('Error saving API key to profile:', updateError.message)
       }
     }
 
@@ -158,7 +158,7 @@ export default function SignUpPage() {
                 {showInstructions ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
             </div>
-            
+
             {/* Instructions Panel */}
             {showInstructions && (
               <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3 animate-scale-in">
