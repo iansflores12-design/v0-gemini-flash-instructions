@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: Request) {
   try {
@@ -16,10 +15,21 @@ export async function POST(request: Request) {
 
     const pdfBuffer = Buffer.from(await file.arrayBuffer())
     
-    const pdfParseModule = await import('pdf-parse')
-    const pdfParse = pdfParseModule.default || pdfParseModule
-    const pdfData = await pdfParse(pdfBuffer)
-    const textContent = pdfData.text
+    const pdfjsLib = await import('pdfjs-dist')
+    const pdfjs = pdfjsLib.default || pdfjsLib
+    
+    const loadingTask = pdfjs.getDocument({ data: pdfBuffer })
+    const pdf = await loadingTask.promise
+    
+    let textContent = ''
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i)
+      const content = await page.getTextContent()
+      const pageText = content.items
+        .map((item: any) => item.str)
+        .join(' ')
+      textContent += pageText + '\n'
+    }
 
     if (!textContent || textContent.trim().length < 10) {
       return NextResponse.json({ error: 'No se pudo extraer texto del PDF' }, { status: 400 })
