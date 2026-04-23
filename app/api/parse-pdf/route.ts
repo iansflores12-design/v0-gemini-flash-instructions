@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El PDF parece estar vacío' }, { status: 400 })
     }
 
-    const apiKey = process.env.GROQ_API_KEY
+    const apiKey = process.env.API_KEY
     const today = new Date().toISOString().split('T')[0]
 
     const prompt = `Analiza este documento de una agenda escolar y extrae la información estructurada.
