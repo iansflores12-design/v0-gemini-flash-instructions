@@ -1,62 +1,57 @@
 import { NextResponse } from 'next/server'
+// Usar una versión que no dependa de archivos del sistema para evitar errores en Vercel
+import pdf from 'pdf-parse/lib/pdf-parse.js'
 
 export async function POST(request: Request) {
   try {
     const formData = await request.formData()
     const file = formData.get('pdf') as File | null
-    
-    if (!file) {
-      return NextResponse.json({ error: 'No se proporciono archivo PDF' }, { status: 400 })
-    }
 
-    if (file.type !== 'application/pdf') {
-      return NextResponse.json({ error: 'El archivo debe ser un PDF' }, { status: 400 })
+    if (!file || file.type !== 'application/pdf') {
+      return NextResponse.json({ error: 'Proporciona un archivo PDF válido' }, { status: 400 })
     }
 
     const pdfData = await file.arrayBuffer()
     const pdfBuffer = Buffer.from(pdfData)
-    
-    const pdfParseModule = await import('pdf-parse')
-    const pdfParse = pdfParseModule.default || pdfParseModule
-    
-    const pdfDoc = await pdfParse(pdfBuffer, {
-      version: 'v1.1.1'
-    })
-    const textContent = pdfDoc.text
 
-    if (!textContent || textContent.trim().length < 10) {
-      return NextResponse.json({ error: 'No se pudo extraer texto del PDF' }, { status: 400 })
+    // Extracción de texto más estable
+    let textContent = ""
+    try {
+      const pdfDoc = await pdf(pdfBuffer)
+      textContent = pdfDoc.text
+    } catch (err) {
+      console.error("Error al leer contenido del PDF:", err)
+      return NextResponse.json({ error: 'No se pudo leer el PDF' }, { status: 500 })
+    }
+
+    if (!textContent || textContent.trim().length < 5) {
+      return NextResponse.json({ error: 'El PDF parece estar vacío o protegido' }, { status: 400 })
     }
 
     const apiKey = process.env.GROQ_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Configuración de IA faltante' }, { status: 500 })
+    }
 
-    const prompt = `Analiza este documento de una agenda escolar o lista de tareas y extrae la información estructurada.
+    // Fecha actual para el prompt
+    const today = new Date().toISOString().split('T')[0]
 
-Contenido del documento:
-${textContent.slice(0, 8000)}
+    const prompt = `Analiza esta agenda escolar y extrae las tareas.
+Contenido: ${textContent.slice(0, 6000)}
 
-Responde ÚNICAMENTE con un JSON válido (sin markdown, sin backticks) con este formato exacto:
+Genera un JSON con este formato:
 {
   "tasks": [
     {
-      "title": "Nombre de la tarea",
-      "subject": "Nombre de la materia si se menciona o null",
-      "due_date": "YYYY-MM-DD (usa la fecha actual ${new Date().toISOString().split('T')[0]} como referencia para interpretar fechas relativas como 'mañana', 'lunes', etc.)",
-      "materials": [
-        { "name": "nombre del material", "quantity": "cantidad si se especifica o null" }
-      ]
+      "title": "string",
+      "subject": "string o null",
+      "due_date": "YYYY-MM-DD (Referencia hoy: ${today})",
+      "materials": [{ "name": "string", "quantity": "string o null" }]
     }
   ]
-}
+}`
 
-Reglas:
-- Extrae TODAS las tareas mencionadas
-- Si no hay fecha específica, usa una fecha razonable cercana
-- Los materiales incluyen libros, cuadernos, hojas, colores, cartulinas, etc.
-- Si no hay materiales mencionados, deja el array vacío
-- Responde SOLO con el JSON, sin explicaciones adicionales`
-
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const groqResponse = await fetch('[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -65,44 +60,30 @@ Reglas:
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: [
-          { role: 'system', content: 'Eres un asistente que extrae información de agendas escolares.' },
+          { role: 'system', content: 'Eres un extractor de datos escolares que solo responde en JSON.' },
           { role: 'user', content: prompt }
         ],
         temperature: 0.1,
+        // Esto garantiza que la respuesta sea un objeto JSON directo
         response_format: { type: 'json_object' }
       })
     })
 
-    if (!groqResponse.ok) {
-      const error = await groqResponse.text()
-      console.error('Groq API error:', error)
-      return NextResponse.json({ error: 'Error al procesar con IA' }, { status: 500 })
-    }
-
     const groqData = await groqResponse.json()
-    const responseText = groqData.choices[0]?.message?.content
+    const content = groqData.choices[0]?.message?.content
 
-    if (!responseText) {
-      return NextResponse.json({ error: 'No se obtuvo respuesta de la IA' }, { status: 500 })
+    if (!content) {
+      throw new Error("Respuesta vacía de Groq")
     }
 
-    let cleanedText = responseText.trim()
-    if (cleanedText.startsWith('```json')) {
-      cleanedText = cleanedText.slice(7)
-    } else if (cleanedText.startsWith('```')) {
-      cleanedText = cleanedText.slice(3)
-    }
-    if (cleanedText.endsWith('```')) {
-      cleanedText = cleanedText.slice(0, -3)
-    }
-    cleanedText = cleanedText.trim()
-
-    const parsed = JSON.parse(cleanedText)
+    // No necesitas limpiar backticks si usas json_object mode, solo parsear
+    const parsed = JSON.parse(content)
     return NextResponse.json(parsed)
+
   } catch (error) {
-    console.error('Error parsing PDF:', error)
+    console.error('Error general en el servidor:', error)
     return NextResponse.json(
-      { error: 'Error al procesar el PDF. Intenta de nuevo.' },
+      { error: 'Error interno al procesar la agenda.' },
       { status: 500 }
     )
   }
