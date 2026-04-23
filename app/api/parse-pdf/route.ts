@@ -1,34 +1,11 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: Request) {
   try {
-    // Get user's API key from their profile
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('gemini_api_key')
-      .eq('id', user.id)
-      .single()
-
-    const apiKey = profile?.gemini_api_key
-
-    if (!apiKey) {
-      return NextResponse.json({
-        error: 'No tienes una clave API de Gemini configurada. Ve a tu perfil para agregarla.'
-      }, { status: 400 })
-    }
-
     const formData = await request.formData()
     const file = formData.get('pdf') as File | null
-
+    
     if (!file) {
       return NextResponse.json({ error: 'No se proporciono archivo PDF' }, { status: 400 })
     }
@@ -37,17 +14,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El archivo debe ser un PDF' }, { status: 400 })
     }
 
-    // Initialize Gemini with user's API key
-    const genAI = new GoogleGenerativeAI(apiKey)
+    const pdfBuffer = Buffer.from(await file.arrayBuffer())
+    
+    const pdfParse = require('pdf-parse')
+    const pdfData = await pdfParse(pdfBuffer)
+    const textContent = pdfData.text
 
-    // Convert file to base64
-    const bytes = await file.arrayBuffer()
-    const binary = Array.from(new Uint8Array(bytes)).map(b => String.fromCharCode(b)).join('')
-    const base64 = btoa(binary)
+    if (!textContent || textContent.trim().length < 10) {
+      return NextResponse.json({ error: 'No se pudo extraer texto del PDF' }, { status: 400 })
+    }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
+    const apiKey = process.env.GROQ_API_KEY
 
-    const prompt = `Analiza este documento PDF de una agenda escolar o lista de tareas y extrae la información estructurada.
+    const prompt = `Analiza este documento de una agenda escolar o lista de tareas y extrae la información estructurada.
+
+Contenido del documento:
+${textContent.slice(0, 8000)}
 
 Responde ÚNICAMENTE con un JSON válido (sin markdown, sin backticks) con este formato exacto:
 {
@@ -70,20 +52,36 @@ Reglas:
 - Si no hay materiales mencionados, deja el array vacío
 - Responde SOLO con el JSON, sin explicaciones adicionales`
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          mimeType: 'application/pdf',
-          data: base64
-        }
-      }
-    ])
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          { role: 'system', content: 'Eres un asistente que extrae información de agendas escolares.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.1,
+        response_format: { type: 'json_object' }
+      })
+    })
 
-    const response = await result.response
-    const responseText = response.text()
+    if (!groqResponse.ok) {
+      const error = await groqResponse.text()
+      console.error('Groq API error:', error)
+      return NextResponse.json({ error: 'Error al procesar con IA' }, { status: 500 })
+    }
 
-    // Clean the response - remove markdown code blocks if present
+    const groqData = await groqResponse.json()
+    const responseText = groqData.choices[0]?.message?.content
+
+    if (!responseText) {
+      return NextResponse.json({ error: 'No se obtuvo respuesta de la IA' }, { status: 500 })
+    }
+
     let cleanedText = responseText.trim()
     if (cleanedText.startsWith('```json')) {
       cleanedText = cleanedText.slice(7)
@@ -96,19 +94,9 @@ Reglas:
     cleanedText = cleanedText.trim()
 
     const parsed = JSON.parse(cleanedText)
-
     return NextResponse.json(parsed)
   } catch (error) {
     console.error('Error parsing PDF:', error)
-
-    // Check if it's an API key error
-    if (error instanceof Error && error.message.includes('API_KEY')) {
-      return NextResponse.json(
-        { error: 'Tu clave API de Gemini no es valida. Verifica que sea correcta en tu perfil.' },
-        { status: 400 }
-      )
-    }
-
     return NextResponse.json(
       { error: 'Error al procesar el PDF. Intenta de nuevo.' },
       { status: 500 }
