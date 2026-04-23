@@ -16,15 +16,6 @@ export default async function ProfilePage() {
     .toUpperCase()
     .slice(0, 2)
 
-  // Get profile with API key
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('gemini_api_key')
-    .eq('id', user?.id)
-    .single()
-
-  const hasApiKey = !!profile?.gemini_api_key
-
   return (
     <main className="min-h-screen">
       <header className="px-4 pt-6 pb-4 bg-background">
@@ -51,8 +42,8 @@ export default async function ProfilePage() {
           <p className="text-muted-foreground mt-1">{email}</p>
         </div>
 
-        {/* API Key Manager */}
-        <ApiKeyManager hasApiKey={hasApiKey} />
+        {/* API Status */}
+        <ApiKeyManager />
 
         {/* App Info */}
         <div className="p-4 rounded-2xl bg-card border border-border">
