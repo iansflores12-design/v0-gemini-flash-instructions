@@ -29,7 +29,6 @@ export async function POST(request: Request) {
     const apiKey = process.env.GROQ_API_KEY
     const today = new Date().toISOString().split('T')[0]
 
-    // Definición clara del prompt para el usuario
     const userPrompt = `Analiza esta agenda y extrae las tareas en JSON.
 Contenido del documento: ${textContent.slice(0, 6000)}
 Referencia de fecha hoy: ${today}`
@@ -69,7 +68,7 @@ Referencia de fecha hoy: ${today}`
     if (!groqResponse.ok) {
       const errorText = await groqResponse.text()
       console.error("Error de Groq:", errorText)
-      return NextResponse.json({ error: 'Error en la comunicación con la IA' }, { status: 502 })
+      return NextResponse.json({ error: 'Error de autenticación o comunicación con la IA' }, { status: groqResponse.status })
     }
 
     const groqData = await groqResponse.json()
