@@ -32,8 +32,9 @@ export async function POST(request: Request) {
     const prompt = `Analiza esta agenda y extrae las tareas en JSON.
 Contenido: ${textContent.slice(0, 6000)}
 Referencia hoy: ${today}
-Formato esperado: { "tasks": [{ "title": "string", "subject": "string", "due_date": "YYYY-MM-DD", "materials": [] }] }`
+Formato: { "tasks": [{ "title": "string", "subject": "string", "due_date": "YYYY-MM-DD", "materials": [] }] }`
 
+    // URL corregida sin formato Markdown
     const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -43,7 +44,7 @@ Formato esperado: { "tasks": [{ "title": "string", "subject": "string", "due_dat
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: [
-          { role: 'system', content: 'Eres un asistente que extrae información de agendas escolares y responde ÚNICAMENTE en formato JSON puro.' },
+          { role: 'system', content: 'Eres un extractor de datos escolares que solo responde en JSON puro.' },
           { role: 'user', content: prompt }
         ],
         temperature: 0.1,
@@ -59,10 +60,6 @@ Formato esperado: { "tasks": [{ "title": "string", "subject": "string", "due_dat
 
     const groqData = await groqResponse.json()
     const content = groqData.choices[0]?.message?.content
-
-    if (!content) {
-      return NextResponse.json({ error: 'La IA no devolvió contenido' }, { status: 500 })
-    }
 
     return NextResponse.json(JSON.parse(content))
 
