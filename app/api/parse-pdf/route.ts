@@ -14,22 +14,11 @@ export async function POST(request: Request) {
     }
 
     const pdfData = await file.arrayBuffer()
+    const pdfBuffer = Buffer.from(pdfData)
     
-    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
-    const pdfjs = pdfjsLib.default || pdfjsLib
-    
-    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(pdfData) })
-    const pdf = await loadingTask.promise
-    
-    let textContent = ''
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i)
-      const content = await page.getTextContent()
-      const pageText = content.items
-        .map((item: any) => item.str)
-        .join(' ')
-      textContent += pageText + '\n'
-    }
+    const pdfParse = require('pdf-parse')
+    const pdfDoc = await pdfParse(pdfBuffer)
+    const textContent = pdfDoc.text
 
     if (!textContent || textContent.trim().length < 10) {
       return NextResponse.json({ error: 'No se pudo extraer texto del PDF' }, { status: 400 })
