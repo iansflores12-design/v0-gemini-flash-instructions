@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-// Usar una versión que no dependa de archivos del sistema para evitar errores en Vercel
 import pdf from 'pdf-parse/lib/pdf-parse.js'
 
 export async function POST(request: Request) {
@@ -14,7 +13,6 @@ export async function POST(request: Request) {
     const pdfData = await file.arrayBuffer()
     const pdfBuffer = Buffer.from(pdfData)
 
-    // Extracción de texto más estable
     let textContent = ""
     try {
       const pdfDoc = await pdf(pdfBuffer)
@@ -25,33 +23,19 @@ export async function POST(request: Request) {
     }
 
     if (!textContent || textContent.trim().length < 5) {
-      return NextResponse.json({ error: 'El PDF parece estar vacío o protegido' }, { status: 400 })
+      return NextResponse.json({ error: 'El PDF parece estar vacío' }, { status: 400 })
     }
 
     const apiKey = process.env.GROQ_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Configuración de IA faltante' }, { status: 500 })
-    }
-
-    // Fecha actual para el prompt
     const today = new Date().toISOString().split('T')[0]
 
-    const prompt = `Analiza esta agenda escolar y extrae las tareas.
+    const prompt = `Analiza esta agenda y extrae las tareas en JSON.
 Contenido: ${textContent.slice(0, 6000)}
+Referencia hoy: ${today}
+Formato: { "tasks": [{ "title": "string", "subject": "string", "due_date": "YYYY-MM-DD", "materials": [] }] }`
 
-Genera un JSON con este formato:
-{
-  "tasks": [
-    {
-      "title": "string",
-      "subject": "string o null",
-      "due_date": "YYYY-MM-DD (Referencia hoy: ${today})",
-      "materials": [{ "name": "string", "quantity": "string o null" }]
-    }
-  ]
-}`
-
-    const groqResponse = await fetch('[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)', {
+    // URL corregida sin formato Markdown
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -60,31 +44,27 @@ Genera un JSON con este formato:
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: [
-          { role: 'system', content: 'Eres un extractor de datos escolares que solo responde en JSON.' },
+          { role: 'system', content: 'Eres un extractor de datos escolares que solo responde en JSON puro.' },
           { role: 'user', content: prompt }
         ],
         temperature: 0.1,
-        // Esto garantiza que la respuesta sea un objeto JSON directo
         response_format: { type: 'json_object' }
       })
     })
 
+    if (!groqResponse.ok) {
+      const errorText = await groqResponse.text()
+      console.error("Error de Groq:", errorText)
+      return NextResponse.json({ error: 'Error en la comunicación con la IA' }, { status: 502 })
+    }
+
     const groqData = await groqResponse.json()
     const content = groqData.choices[0]?.message?.content
 
-    if (!content) {
-      throw new Error("Respuesta vacía de Groq")
-    }
-
-    // No necesitas limpiar backticks si usas json_object mode, solo parsear
-    const parsed = JSON.parse(content)
-    return NextResponse.json(parsed)
+    return NextResponse.json(JSON.parse(content))
 
   } catch (error) {
     console.error('Error general en el servidor:', error)
-    return NextResponse.json(
-      { error: 'Error interno al procesar la agenda.' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
