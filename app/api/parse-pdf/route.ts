@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El archivo debe ser un PDF' }, { status: 400 })
     }
 
-    const pdfBuffer = Buffer.from(await file.arrayBuffer())
+    const pdfBuffer = new Uint8Array(await file.arrayBuffer())
     
     const pdfjsLib = await import('pdfjs-dist')
     const pdfjs = pdfjsLib.default || pdfjsLib
