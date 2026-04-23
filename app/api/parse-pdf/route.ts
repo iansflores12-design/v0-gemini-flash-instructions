@@ -13,12 +13,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El archivo debe ser un PDF' }, { status: 400 })
     }
 
-    const pdfBuffer = new Uint8Array(await file.arrayBuffer())
+    const pdfData = await file.arrayBuffer()
     
-    const pdfjsLib = await import('pdfjs-dist')
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
     const pdfjs = pdfjsLib.default || pdfjsLib
     
-    const loadingTask = pdfjs.getDocument({ data: pdfBuffer })
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(pdfData) })
     const pdf = await loadingTask.promise
     
     let textContent = ''
