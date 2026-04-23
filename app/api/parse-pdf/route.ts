@@ -5,7 +5,7 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData()
     const file = formData.get('pdf') as File | null
-    
+
     if (!file) {
       return NextResponse.json({ error: 'No se proporciono archivo PDF' }, { status: 400 })
     }
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     }
 
     const pdfBuffer = Buffer.from(await file.arrayBuffer())
-    
+
     const pdfParse = require('pdf-parse')
     const pdfData = await pdfParse(pdfBuffer)
     const textContent = pdfData.text
@@ -47,7 +47,7 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin backticks) con este 
 
 Reglas:
 - Extrae TODAS las tareas mencionadas
-- Si no hay fecha específica, usa una fecha razonable cercana
+- Si no hay fecha específica, usa una fecha de la semana ejemplo semana 6-9
 - Los materiales incluyen libros, cuadernos, hojas, colores, cartulinas, etc.
 - Si no hay materiales mencionados, deja el array vacío
 - Responde SOLO con el JSON, sin explicaciones adicionales`
