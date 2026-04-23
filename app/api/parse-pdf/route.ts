@@ -29,12 +29,11 @@ export async function POST(request: Request) {
     const apiKey = process.env.GROQ_API_KEY
     const today = new Date().toISOString().split('T')[0]
 
-    const prompt = `Analiza esta agenda y extrae las tareas en JSON.
-Contenido: ${textContent.slice(0, 6000)}
-Referencia hoy: ${today}
-Formato: { "tasks": [{ "title": "string", "subject": "string", "due_date": "YYYY-MM-DD", "materials": [] }] }`
+    // Definición clara del prompt para el usuario
+    const userPrompt = `Analiza esta agenda y extrae las tareas en JSON.
+Contenido del documento: ${textContent.slice(0, 6000)}
+Referencia de fecha hoy: ${today}`
 
-    // URL corregida sin formato Markdown
     const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -44,8 +43,23 @@ Formato: { "tasks": [{ "title": "string", "subject": "string", "due_date": "YYYY
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: [
-          { role: 'system', content: 'Eres un extractor de datos escolares que solo responde en JSON puro.' },
-          { role: 'user', content: prompt }
+          {
+            role: 'system',
+            content: `Eres un asistente que extrae información de agendas escolares. 
+            Responde ÚNICAMENTE con un JSON válido con este formato exacto:
+            {
+              "tasks": [
+                {
+                  "title": "Nombre de la tarea",
+                  "subject": "Materia o null",
+                  "due_date": "YYYY-MM-DD",
+                  "materials": [{ "name": "material", "quantity": "cantidad o null" }]
+                }
+              ]
+            }
+            Reglas: Extrae todas las tareas, usa la fecha actual ${today} como referencia, y no incluyas explicaciones.`
+          },
+          { role: 'user', content: userPrompt }
         ],
         temperature: 0.1,
         response_format: { type: 'json_object' }
@@ -60,6 +74,10 @@ Formato: { "tasks": [{ "title": "string", "subject": "string", "due_date": "YYYY
 
     const groqData = await groqResponse.json()
     const content = groqData.choices[0]?.message?.content
+
+    if (!content) {
+      return NextResponse.json({ error: 'La IA no devolvió contenido' }, { status: 500 })
+    }
 
     return NextResponse.json(JSON.parse(content))
 
