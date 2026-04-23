@@ -17,7 +17,8 @@ export async function POST(request: Request) {
     const pdfBuffer = Buffer.from(await file.arrayBuffer())
     
     const pdfParseModule = await import('pdf-parse')
-    const pdfData = await pdfParseModule.default(pdfBuffer)
+    const pdfParse = pdfParseModule.default || pdfParseModule
+    const pdfData = await pdfParse(pdfBuffer)
     const textContent = pdfData.text
 
     if (!textContent || textContent.trim().length < 10) {
