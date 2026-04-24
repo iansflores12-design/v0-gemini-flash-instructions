@@ -1,93 +1,43 @@
 import { NextResponse } from 'next/server'
-// @ts-ignore
-import pdf from 'pdf-parse/lib/pdf-parse.js'
 
 export async function POST(request: Request) {
   try {
     const formData = await request.formData()
     const file = formData.get('pdf') as File | null
 
-    if (!file || file.type !== 'application/pdf') {
-      return NextResponse.json({ error: 'Proporciona un archivo PDF válido' }, { status: 400 })
+    if (!file) {
+      return NextResponse.json({ error: 'No se subió ningún archivo' }, { status: 400 })
     }
 
-    const pdfData = await file.arrayBuffer()
-    const pdfBuffer = Buffer.from(pdfData)
+    // 1. Preparamos el FormData para n8n
+    const n8nData = new FormData()
+    // 'data' es el nombre que el nodo "Extract from File" espera recibir
+    n8nData.append('data', file)
 
-    let textContent = ""
-    try {
-      // Uso de la librería de forma directa para evitar errores de módulos
-      const pdfDoc = await pdf(pdfBuffer)
-      textContent = pdfDoc.text
-    } catch (err) {
-      console.error("Error al leer el PDF:", err)
-      return NextResponse.json({ error: 'No se pudo leer el contenido del PDF' }, { status: 500 })
-    }
+    // 2. Tu URL de ngrok actualizada
+    const N8N_WEBHOOK_URL = 'https://dimness-traps-retired.ngrok-free.dev/webhook-test/extract-tasks'
 
-    if (!textContent || textContent.trim().length < 5) {
-      return NextResponse.json({ error: 'El PDF parece estar vacío' }, { status: 400 })
-    }
+    console.log('Enviando archivo a n8n...');
 
-    const apiKey = process.env.API_KEY
-    const today = new Date().toISOString().split('T')[0]
-
-    const prompt = `Analiza este documento de una agenda escolar y extrae la información estructurada.
-Contenido: ${textContent.slice(0, 7000)}
-
-Responde ÚNICAMENTE con un JSON válido con este formato:
-{
-  "tasks": [
-    {
-      "title": "Nombre de la tarea",
-      "subject": "Materia o null",
-      "due_date": "YYYY-MM-DD (Referencia hoy: ${today})",
-      "materials": [
-        { "name": "nombre del material", "quantity": "cantidad o null" }
-      ]
-    }
-  ]
-}
-
-Reglas:
-- Extrae TODAS las tareas mencionadas.
-- Los materiales incluyen libros, cuadernos, útiles, cartulinas, etc.
-- Si no hay materiales, deja el array vacío [].
-- Responde SOLO con el JSON puro, sin explicaciones ni bloques de código.`
-
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        messages: [
-          { role: 'system', content: 'Eres un asistente experto en extraer datos escolares y responder solo en JSON.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.1,
-        response_format: { type: 'json_object' }
-      })
+      body: n8nData,
+      // IMPORTANTE: Dejar que el navegador maneje los headers automáticamente
     })
 
-    if (!groqResponse.ok) {
-      const errorText = await groqResponse.text()
-      console.error("Error de Groq:", errorText)
-      return NextResponse.json({ error: 'Error de autenticación o cuota con la IA' }, { status: 401 })
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Error desde n8n:', errorText)
+      return NextResponse.json({ error: 'Error en el procesamiento de n8n' }, { status: response.status })
     }
 
-    const groqData = await groqResponse.json()
-    const content = groqData.choices[0]?.message?.content
+    const data = await response.json()
 
-    if (!content) {
-      return NextResponse.json({ error: 'La IA no devolvió resultados' }, { status: 500 })
-    }
-
-    return NextResponse.json(JSON.parse(content))
+    // Devolvemos el JSON estructurado (tasks, materials, etc.) al frontend
+    return NextResponse.json(data)
 
   } catch (error) {
-    console.error('Error general en el servidor:', error)
+    console.error('Error en el servidor Next.js:', error)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
