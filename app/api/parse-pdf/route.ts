@@ -6,38 +6,41 @@ export async function POST(request: Request) {
     const file = formData.get('pdf') as File | null
 
     if (!file) {
-      return NextResponse.json({ error: 'No se subió ningún archivo' }, { status: 400 })
+      return NextResponse.json({ error: 'No se recibió el archivo PDF' }, { status: 400 })
     }
 
-    // 1. Preparamos el FormData para n8n
+    // 1. Preparamos el envío hacia n8n
     const n8nData = new FormData()
-    // 'data' es el nombre que el nodo "Extract from File" espera recibir
+    // 'data' debe coincidir con el "Input Data Field" en tu nodo de n8n
     n8nData.append('data', file)
 
-    // 2. Tu URL de ngrok actualizada
+    // 2. Tu URL de ngrok (Asegúrate de que sea la actual)
     const N8N_WEBHOOK_URL = 'https://dimness-traps-retired.ngrok-free.dev/webhook-test/extract-tasks'
 
-    console.log('Enviando archivo a n8n...');
+    console.log('Enviando agenda a n8n...')
 
     const response = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
       body: n8nData,
-      // IMPORTANTE: Dejar que el navegador maneje los headers automáticamente
+      // No agregues headers manuales, deja que el navegador gestione el boundary
     })
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Error desde n8n:', errorText)
-      return NextResponse.json({ error: 'Error en el procesamiento de n8n' }, { status: response.status })
+      return NextResponse.json({ error: `n8n error: ${errorText}` }, { status: response.status })
     }
 
-    const data = await response.json()
+    // 3. Recibimos el JSON estructurado de n8n
+    const result = await response.json()
 
-    // Devolvemos el JSON estructurado (tasks, materials, etc.) al frontend
-    return NextResponse.json(data)
+    // IMPORTANTE: Imprimimos en tu terminal para que veas qué llega
+    console.log('Respuesta de n8n recibida correctamente')
+
+    // Enviamos el resultado (que contiene { "tasks": [...] }) al frontend
+    return NextResponse.json(result)
 
   } catch (error) {
-    console.error('Error en el servidor Next.js:', error)
+    console.error('Error en route.ts:', error)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
