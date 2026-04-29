@@ -1,6 +1,6 @@
 {
-  "name": "StudyFlow",
-  "short_name": "StudyFlow",
+  "name": "ClearGrade",
+  "short_name": "ClearGrade",
   "description": "Tu asistente de estudio inteligente",
   "start_url": "/dashboard",
   "display": "standalone",

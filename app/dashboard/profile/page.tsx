@@ -1,12 +1,21 @@
 import { createClient } from '@/lib/supabase/server'
-import { User, BookOpen } from 'lucide-react'
+import { User, BookOpen, Settings, Key } from 'lucide-react'
 import { LogoutButton } from '@/components/logout-button'
+import { ApiKeyManager } from '@/components/api-key-manager'
+import Link from 'next/link'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const fullName = user?.user_metadata?.full_name || 'Usuario'
+  // Get profile with API key
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user?.id)
+    .single()
+
+  const fullName = user?.user_metadata?.full_name || profile?.full_name || 'Usuario'
   const email = user?.email || ''
   const initials = fullName
     .split(' ')
@@ -15,8 +24,10 @@ export default async function ProfilePage() {
     .toUpperCase()
     .slice(0, 2)
 
+  const hasApiKey = !!profile?.gemini_api_key
+
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen pb-24">
       <header className="px-4 pt-6 pb-4 bg-background">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
@@ -29,7 +40,7 @@ export default async function ProfilePage() {
         </div>
       </header>
 
-      <div className="px-4 space-y-6 pb-24">
+      <div className="px-4 space-y-6">
         {/* Profile Card */}
         <div className="p-6 rounded-2xl bg-card border border-border text-center">
           <div className="w-20 h-20 rounded-full bg-primary mx-auto mb-4 flex items-center justify-center">
@@ -41,6 +52,36 @@ export default async function ProfilePage() {
           <p className="text-muted-foreground mt-1">{email}</p>
         </div>
 
+        {/* API Key Section */}
+        <div className="p-4 rounded-2xl bg-card border border-border">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+              <Key className="w-5 h-5 text-accent" />
+            </div>
+            <div>
+              <p className="font-medium text-foreground">Gemini API Key</p>
+              <p className="text-sm text-muted-foreground">
+                {hasApiKey ? 'Configurada' : 'No configurada'}
+              </p>
+            </div>
+          </div>
+          <ApiKeyManager currentHasKey={hasApiKey} />
+        </div>
+
+        {/* Settings Link */}
+        <Link 
+          href="/dashboard/settings"
+          className="flex items-center gap-3 p-4 rounded-2xl bg-card border border-border hover:bg-secondary/50 transition-colors"
+        >
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Settings className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="font-medium text-foreground">Ajustes</p>
+            <p className="text-sm text-muted-foreground">Temas y personalizacion</p>
+          </div>
+        </Link>
+
         {/* App Info */}
         <div className="p-4 rounded-2xl bg-card border border-border">
           <div className="flex items-center gap-3 mb-4">
@@ -48,7 +89,7 @@ export default async function ProfilePage() {
               <BookOpen className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <p className="font-medium text-foreground">StudyFlow</p>
+              <p className="font-medium text-foreground">ClearGrade</p>
               <p className="text-sm text-muted-foreground">Version 1.0</p>
             </div>
           </div>

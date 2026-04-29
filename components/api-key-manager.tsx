@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 interface ApiKeyManagerProps {
-  hasApiKey: boolean
+  currentHasKey: boolean
 }
 
-export function ApiKeyManager({ hasApiKey }: ApiKeyManagerProps) {
+export function ApiKeyManager({ currentHasKey }: ApiKeyManagerProps) {
+  const hasApiKey = currentHasKey
   const [isEditing, setIsEditing] = useState(false)
   const [apiKey, setApiKey] = useState('')
   const [showApiKey, setShowApiKey] = useState(false)

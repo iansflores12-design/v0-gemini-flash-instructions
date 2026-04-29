@@ -1,6 +1,5 @@
-
 import Link from 'next/link'
-import { BookOpen, Sparkles, CheckCircle2, Calendar, Package } from 'lucide-react'
+import { BookOpen, Sparkles, CheckCircle2, Calendar, Package, FileUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -23,12 +22,12 @@ export default async function LandingPage() {
             <BookOpen className="w-10 h-10 text-primary-foreground" />
           </div>
 
-          <h1 className="text-3xl font-bold text-foreground mb-3 text-balance animate-slide-up">
-            Organiza tu vida escolar con IA
+          <h1 className="text-4xl font-bold text-foreground mb-3 text-balance animate-slide-up">
+            ClearGrade
           </h1>
 
           <p className="text-lg text-muted-foreground mb-8 leading-relaxed animate-slide-up">
-            Escribe o fotografía tu agenda y StudyFlow organizará automáticamente tus tareas y materiales.
+            Sube tu agenda PDF/DOCX y ClearGrade organizara automaticamente tus tareas y materiales.
           </p>
 
           <div className="flex flex-col gap-3 animate-slide-up">
@@ -46,6 +45,26 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* Upload Preview Card */}
+      <section className="px-4 pb-8">
+        <div className="max-w-md mx-auto">
+          <div className="p-6 rounded-3xl bg-card border border-border shadow-sm">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <FileUp className="w-7 h-7 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground text-lg">Sube tu agenda</h3>
+                <p className="text-sm text-muted-foreground">PDF o DOCX</p>
+              </div>
+            </div>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Nuestra IA extrae automaticamente tareas, fechas de entrega, materiales y los organiza por materia y semana.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="px-4 py-12 bg-secondary/30">
         <div className="max-w-md mx-auto">
@@ -57,28 +76,28 @@ export default async function LandingPage() {
             <FeatureCard
               icon={<Sparkles className="w-6 h-6" />}
               title="IA que entiende tu agenda"
-              description="Escribe como quieras. La IA extrae tareas, fechas y materiales automaticamente."
+              description="Sube tu PDF o DOCX. La IA extrae tareas, fechas y materiales automaticamente."
               color="bg-primary/10 text-primary"
             />
 
             <FeatureCard
               icon={<Calendar className="w-6 h-6" />}
-              title="Fechas siempre claras"
-              description="Visualiza tus entregas por dia, semana o mes. Nunca olvides una fecha importante."
+              title="Organizado por semana"
+              description="Visualiza tus entregas por semana. Cada tarea muestra descripcion, valor y materiales."
               color="bg-accent/10 text-accent"
             />
 
             <FeatureCard
               icon={<Package className="w-6 h-6" />}
               title="Materiales organizados"
-              description="Sabe exactamente que llevar cada dia. Todo en un solo lugar."
+              description="Ve los materiales de la semana en formato de lista. Todo en un solo lugar."
               color="bg-chart-3/20 text-chart-3"
             />
 
             <FeatureCard
               icon={<CheckCircle2 className="w-6 h-6" />}
               title="Progreso visible"
-              description="Marca tareas completadas y celebra tu avance. Mantente motivado."
+              description="Marca tareas completadas y agregales a Google Calendar."
               color="bg-chart-2/20 text-chart-2"
             />
           </div>

@@ -2,6 +2,8 @@ export interface Profile {
   id: string
   username: string | null
   full_name: string | null
+  gemini_api_key: string | null
+  theme: string | null
   updated_at: string
 }
 
@@ -19,6 +21,7 @@ export interface Task {
   title: string
   description: string | null
   due_date: string
+  value: string | null
   is_done: boolean
   created_at: string
   subject?: Subject
@@ -36,11 +39,21 @@ export interface Material {
 export interface ParsedAgendaItem {
   title: string
   subject?: string
+  subject_color?: string
   due_date: string
+  description?: string
+  value?: string
   materials: { name: string; quantity?: string }[]
 }
 
 export interface AgendaParseResult {
   tasks: ParsedAgendaItem[]
   raw_text: string
+}
+
+export interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
 }

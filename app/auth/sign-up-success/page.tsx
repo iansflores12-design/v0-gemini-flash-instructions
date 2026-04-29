@@ -20,7 +20,7 @@ export default function SignUpSuccessPage() {
         <div className="p-4 rounded-2xl bg-secondary/50 mb-6">
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <BookOpen className="w-4 h-4" />
-            <span>StudyFlow</span>
+            <span>ClearGrade</span>
           </div>
         </div>
 

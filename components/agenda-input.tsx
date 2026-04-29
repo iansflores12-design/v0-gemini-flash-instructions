@@ -20,8 +20,12 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = (file: File) => {
-    if (file.type !== 'application/pdf') {
-      setError('Solo se permiten archivos PDF')
+    const fileName = file.name.toLowerCase()
+    const isPDF = fileName.endsWith('.pdf') || file.type === 'application/pdf'
+    const isDOCX = fileName.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    
+    if (!isPDF && !isDOCX) {
+      setError('Solo se permiten archivos PDF o DOCX')
       return
     }
     setSelectedFile(file)
@@ -66,11 +70,15 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
       
       if (!response.ok) {
         const errData = await response.json()
-        throw new Error(errData.error || 'Error al procesar el PDF')
+        throw new Error(errData.error || 'Error al procesar el archivo')
       }
       
       const data = await response.json()
       setParsedTasks(data.tasks || [])
+      
+      if (!data.tasks || data.tasks.length === 0) {
+        setError('No se encontraron tareas en el documento. Intenta con otro archivo.')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
     } finally {
@@ -86,7 +94,9 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
           task.title,
           task.due_date,
           task.subject || undefined,
-          task.materials || []
+          task.materials || [],
+          task.description,
+          task.subject_color
         )
       }
       setSelectedFile(null)
@@ -110,6 +120,12 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
     }
   }
 
+  const getFileIcon = () => {
+    if (!selectedFile) return <FileUp className="w-8 h-8 text-on-surface-variant" />
+    const ext = selectedFile.name.split('.').pop()?.toLowerCase()
+    return <FileText className="w-8 h-8 text-primary" />
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex items-center gap-3">
@@ -117,23 +133,21 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
           <Sparkles className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Procesar agenda</h2>
-          <p className="text-sm text-muted-foreground">Sube tu agenda en PDF</p>
+          <h2 className="text-lg font-semibold text-foreground">Sube tu agenda</h2>
+          <p className="text-sm text-muted-foreground">PDF o DOCX</p>
         </div>
       </div>
 
       {parsedTasks.length === 0 ? (
         <div className="space-y-4">
-          {/* Hidden file input - PDF only */}
           <input
             ref={fileInputRef}
             type="file"
-            accept="application/pdf"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             onChange={handleInputChange}
             className="hidden"
           />
 
-          {/* Drop zone / Upload area */}
           <div
             onClick={() => fileInputRef.current?.click()}
             onDrop={handleDrop}
@@ -154,7 +168,7 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
               {selectedFile ? (
                 <>
                   <div className="w-16 h-16 rounded-2xl bg-primary/12 flex items-center justify-center mb-4">
-                    <FileText className="w-8 h-8 text-primary" />
+                    {getFileIcon()}
                   </div>
                   <p className="font-medium text-foreground text-center mb-1">{selectedFile.name}</p>
                   <p className="text-sm text-muted-foreground">
@@ -176,13 +190,13 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
                     <FileUp className="w-8 h-8 text-on-surface-variant" />
                   </div>
                   <p className="font-medium text-foreground text-center mb-1">
-                    Arrastra tu PDF aqui
+                    Arrastra tu archivo aqui
                   </p>
                   <p className="text-sm text-muted-foreground text-center">
                     o toca para seleccionar
                   </p>
                   <div className="mt-4 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                    Solo archivos PDF
+                    PDF o DOCX
                   </div>
                 </>
               )}
@@ -204,7 +218,7 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
             {loading ? (
               <>
                 <Loader2 className="w-5 h-5 mr-3 animate-spin" />
-                Procesando PDF...
+                Procesando...
               </>
             ) : (
               <>
@@ -233,19 +247,34 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
               {parsedTasks.map((task, index) => (
                 <div 
                   key={index}
-                  className="flex items-start gap-3 p-4 rounded-2xl bg-card shadow-sm"
+                  className="flex items-start gap-3 p-4 rounded-2xl bg-card shadow-sm border-l-4"
+                  style={{ borderLeftColor: task.subject_color || '#6750A4' }}
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-foreground">{task.title}</p>
+                    {task.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+                    )}
                     <div className="flex flex-wrap items-center gap-2 mt-2">
                       {task.subject && (
-                        <span className="px-3 py-1 rounded-full bg-primary/12 text-primary text-xs font-medium">
+                        <span 
+                          className="px-3 py-1 rounded-full text-xs font-medium"
+                          style={{ 
+                            backgroundColor: `${task.subject_color || '#6750A4'}20`,
+                            color: task.subject_color || '#6750A4'
+                          }}
+                        >
                           {task.subject}
                         </span>
                       )}
                       <span className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-xs">
                         {task.due_date}
                       </span>
+                      {task.value && (
+                        <span className="px-3 py-1 rounded-full bg-chart-3/20 text-chart-3 text-xs font-medium">
+                          {task.value}
+                        </span>
+                      )}
                     </div>
                     {task.materials && task.materials.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">

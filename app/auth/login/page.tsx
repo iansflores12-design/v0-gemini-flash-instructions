@@ -44,7 +44,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-4">
             <BookOpen className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-semibold text-foreground">StudyFlow</h1>
+          <h1 className="text-2xl font-semibold text-foreground">ClearGrade</h1>
           <p className="text-muted-foreground mt-1">Inicia sesion para continuar</p>
         </div>
 

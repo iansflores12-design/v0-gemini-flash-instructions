@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 const geistMono = Geist_Mono({ 
@@ -9,14 +10,14 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'StudyFlow - Tu asistente de estudio inteligente',
+  title: 'ClearGrade - Tu asistente de estudio inteligente',
   description: 'Organiza tus tareas y materiales escolares con inteligencia artificial',
   generator: 'v0.app',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'StudyFlow',
+    title: 'ClearGrade',
   },
   icons: {
     icon: [
@@ -45,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={geistMono.variable}>
+    <html lang="es" className={geistMono.variable} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -55,7 +56,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased bg-background min-h-screen">
-        {children}
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

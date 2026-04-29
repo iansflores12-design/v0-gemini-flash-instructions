@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Material 3 Expressive Color Palette - StudyFlow */
+/* Material 3 Expressive Color Palette - ClearGrade */
 :root {
   /* Primary - Deep Blue */
   --background: oklch(0.98 0.005 270);
@@ -40,7 +40,7 @@
   --sidebar-border: oklch(0.90 0.02 270);
   --sidebar-ring: oklch(0.45 0.18 270);
   
-  /* StudyFlow custom colors */
+  /* ClearGrade custom colors */
   --surface-container: oklch(0.96 0.008 270);
   --surface-container-high: oklch(0.94 0.01 270);
   --on-surface-variant: oklch(0.45 0.02 270);
