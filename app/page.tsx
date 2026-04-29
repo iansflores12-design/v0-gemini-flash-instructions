@@ -132,10 +132,16 @@ export default async function LandingPage() {
       <footer className="px-4 py-10 border-t border-border">
         <div className="max-w-md mx-auto flex items-center justify-center gap-3">
           <img
-            src="/cleargrade-vector.svg"
+            src="/cleargrade-logo.svg"
             alt=""
             aria-hidden="true"
-            className="w-8 h-8 opacity-60"
+            className="w-8 h-8 opacity-60 dark:hidden"
+          />
+          <img
+            src="/cleargrade-logo-dark.svg"
+            alt=""
+            aria-hidden="true"
+            className="w-8 h-8 opacity-60 hidden dark:block"
           />
           <span
             className="text-2xl font-bold text-muted-foreground tracking-wide"

@@ -30,7 +30,7 @@ export function LogoImage() {
   if (!mounted) {
     return (
       <img
-        src="/cleargrade-vector.svg"
+        src="/cleargrade-logo.svg"
         alt="ClearGrade logo"
         className="w-20 h-20"
       />
@@ -39,7 +39,7 @@ export function LogoImage() {
 
   return (
     <img
-      src={isDark ? '/cleargrade-vector-dark.svg' : '/cleargrade-vector.svg'}
+      src={isDark ? '/cleargrade-logo-dark.svg' : '/cleargrade-logo.svg'}
       alt="ClearGrade logo"
       className="w-20 h-20 transition-opacity duration-300"
     />
