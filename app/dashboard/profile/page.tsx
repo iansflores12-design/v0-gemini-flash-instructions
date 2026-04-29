@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { User, BookOpen, Key, Palette, Check, ChevronDown, ChevronRight, LogOut } from 'lucide-react'
+import { User, BookOpen, Palette, Check, ChevronDown, ChevronRight, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { themes, getThemeById, getDefaultTheme, type Theme } from '@/lib/themes'
@@ -11,9 +11,6 @@ export default function ProfilePage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [showThemes, setShowThemes] = useState(false)
-  const [showApiKey, setShowApiKey] = useState(false)
-  const [apiKey, setApiKey] = useState('')
-  const [savingKey, setSavingKey] = useState(false)
   const [customColor, setCustomColor] = useState('#6750A4')
   const [useCustomColor, setUseCustomColor] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<Theme>(getDefaultTheme())
@@ -73,19 +70,6 @@ export default function ProfilePage() {
     }
   }
 
-  const handleSaveApiKey = async () => {
-    if (!user) return
-    setSavingKey(true)
-    const supabase = createClient()
-    await supabase
-      .from('profiles')
-      .update({ gemini_api_key: apiKey })
-      .eq('id', user.id)
-    setProfile({ ...profile, gemini_api_key: apiKey })
-    setShowApiKey(false)
-    setSavingKey(false)
-  }
-
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
@@ -95,9 +79,9 @@ export default function ProfilePage() {
   const handleCustomColorChange = (color: string) => {
     setCustomColor(color)
     localStorage.setItem('cleargrade-custom-color', color)
-    if (useCustomColor) {
-      applyCustomColor(color)
-    }
+    localStorage.setItem('cleargrade-use-custom-color', 'true')
+    setUseCustomColor(true)
+    applyCustomColor(color)
   }
 
   const hexToHue = (hex: string): number => {
@@ -182,8 +166,6 @@ export default function ProfilePage() {
     .join('')
     .toUpperCase()
     .slice(0, 2)
-
-  const hasApiKey = !!profile?.gemini_api_key
 
   return (
     <main className="min-h-screen pb-24">
@@ -312,59 +294,6 @@ export default function ProfilePage() {
                   </button>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* API Key Section */}
-        <div className="rounded-2xl bg-card border border-border overflow-hidden">
-          <button
-            onClick={() => setShowApiKey(!showApiKey)}
-            className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                <Key className="w-5 h-5 text-accent" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-foreground">Gemini API Key</p>
-                <p className="text-sm text-muted-foreground">
-                  {hasApiKey ? 'Configurada' : 'No configurada'}
-                </p>
-              </div>
-            </div>
-            {showApiKey ? (
-              <ChevronDown className="w-5 h-5 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            )}
-          </button>
-
-          {showApiKey && (
-            <div className="p-4 pt-0 space-y-3">
-              <div className="p-3 rounded-xl bg-secondary/50 text-sm text-muted-foreground">
-                <p className="font-medium text-foreground mb-1">Como obtener tu API Key:</p>
-                <ol className="list-decimal list-inside space-y-1 text-xs">
-                  <li>Ve a <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" className="text-primary underline">Google AI Studio</a></li>
-                  <li>Inicia sesion con tu cuenta de Google</li>
-                  <li>Haz clic en {"\"Crear API Key\""}</li>
-                  <li>Copia la clave y pegala aqui</li>
-                </ol>
-              </div>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Pega tu API Key aqui..."
-                className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground"
-              />
-              <button
-                onClick={handleSaveApiKey}
-                disabled={savingKey || !apiKey.trim()}
-                className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-medium disabled:opacity-50"
-              >
-                {savingKey ? 'Guardando...' : 'Guardar API Key'}
-              </button>
             </div>
           )}
         </div>

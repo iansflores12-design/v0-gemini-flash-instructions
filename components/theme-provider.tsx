@@ -64,15 +64,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const savedDarkMode = (localStorage.getItem('cleargrade-dark-mode') as DarkMode) ?? 'auto'
 
     setDarkModeState(savedDarkMode)
-    applyDark(savedDarkMode)
-
-    // Listen for system changes when auto
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const handleSystemChange = () => {
-      const current = (localStorage.getItem('cleargrade-dark-mode') as DarkMode) || 'auto'
-      if (current === 'auto') applyDark('auto')
-    }
-    mq.addEventListener('change', handleSystemChange)
     
     if (savedThemeId) {
       const savedTheme = getThemeById(savedThemeId)
@@ -86,6 +77,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setCustomPrimaryColorState(savedCustomColor)
       applyCustomColor(savedCustomColor)
     }
+
+    // Apply dark mode AFTER theme is set
+    setTimeout(() => applyDark(savedDarkMode), 0)
+
+    // Listen for system changes when auto
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleSystemChange = () => {
+      const current = (localStorage.getItem('cleargrade-dark-mode') as DarkMode) || 'auto'
+      if (current === 'auto') applyDark('auto')
+    }
+    mq.addEventListener('change', handleSystemChange)
 
     return () => mq.removeEventListener('change', handleSystemChange)
   }, [])
