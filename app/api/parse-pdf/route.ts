@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import mammoth from 'mammoth'
-const pdf = require('pdf-parse')
+
+// Dynamically import pdf-parse to avoid test file issues
+let pdf: any
+try {
+  pdf = require('pdf-parse/lib/pdf-parse')
+} catch {
+  pdf = null
+}
 
 const HF_TOKEN = process.env.HF_TOKEN || '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'
 
@@ -27,10 +34,15 @@ export async function POST(req: NextRequest) {
       const arrayBuffer = await file.arrayBuffer()
       const result = await mammoth.extractRawText({ arrayBuffer })
       extractedText = result.value
-    } else {
+    } else if (pdf) {
       const arrayBuffer = await file.arrayBuffer()
       const data = await pdf(Buffer.from(arrayBuffer))
       extractedText = data.text
+    } else {
+      return NextResponse.json({ 
+        error: 'PDF processing not available',
+        tasks: [] 
+      }, { status: 500 })
     }
 
     // Now use a text generation model to parse the agenda
