@@ -1,6 +1,7 @@
 import { getSubjects, getTasks } from '@/lib/actions'
 import { BookOpen } from 'lucide-react'
 import { AddSubjectButton } from '@/components/add-subject-button'
+import { SubjectCard } from '@/components/subject-card'
 
 export default async function SubjectsPage() {
   const [subjects, tasks] = await Promise.all([
@@ -22,7 +23,7 @@ export default async function SubjectsPage() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Materias</h1>
             <p className="text-sm text-muted-foreground">
-              {subjects.length} materias registradas
+              {subjects.length} {subjects.length === 1 ? 'materia registrada' : 'materias registradas'}
             </p>
           </div>
         </div>
@@ -34,30 +35,11 @@ export default async function SubjectsPage() {
         {subjects.length > 0 ? (
           <div className="grid gap-3">
             {subjects.map((subject) => (
-              <div
+              <SubjectCard 
                 key={subject.id}
-                className="p-4 rounded-2xl bg-card border border-border flex items-center gap-4"
-              >
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: `${subject.color_code}20` }}
-                >
-                  <BookOpen 
-                    className="w-6 h-6" 
-                    style={{ color: subject.color_code }}
-                  />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">{subject.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {getTaskCount(subject.id)} tareas pendientes
-                  </p>
-                </div>
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: subject.color_code }}
-                />
-              </div>
+                subject={subject}
+                taskCount={getTaskCount(subject.id)}
+              />
             ))}
           </div>
         ) : (

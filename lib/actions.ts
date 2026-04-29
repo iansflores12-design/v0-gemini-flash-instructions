@@ -140,6 +140,21 @@ export async function deleteMaterial(materialId: string): Promise<void> {
   revalidatePath('/dashboard')
 }
 
+export async function deleteSubject(subjectId: string): Promise<void> {
+  const supabase = await createClient()
+  
+  // Tasks and materials will be deleted automatically via ON DELETE CASCADE
+  const { error } = await supabase
+    .from('subjects')
+    .delete()
+    .eq('id', subjectId)
+  
+  if (error) throw error
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/subjects')
+  revalidatePath('/dashboard/tasks')
+}
+
 export async function createTaskWithMaterials(
   title: string,
   dueDate: string,

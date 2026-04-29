@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import mammoth from 'mammoth'
+const pdf = require('pdf-parse')
 
 const HF_TOKEN = process.env.HF_TOKEN || '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'
 
@@ -7,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
     const file = formData.get('pdf') as File | null
-
+    
     if (!file) {
       return NextResponse.json({ error: 'No se subio ningun archivo' }, { status: 400 })
     }
@@ -27,14 +28,14 @@ export async function POST(req: NextRequest) {
       const result = await mammoth.extractRawText({ arrayBuffer })
       extractedText = result.value
     } else {
-      return NextResponse.json({
-        error: 'PDF processing requires OCR. Please convert to DOCX or use a different approach.',
-        tasks: []
-      }, { status: 400 })
+      const arrayBuffer = await file.arrayBuffer()
+      const data = await pdf(Buffer.from(arrayBuffer))
+      extractedText = data.text
     }
 
+    // Now use a text generation model to parse the agenda
     const prompt = `[INST] Analiza el siguiente texto de una agenda escolar y extrae las tareas en formato JSON.
-    
+     
 Texto:
 ${extractedText || 'No se pudo extraer texto'}
 
@@ -76,38 +77,45 @@ Responde SOLO con JSON valido:
     if (!parseResponse.ok) {
       const errorText = await parseResponse.text()
       console.error('HF API error:', errorText)
-      return NextResponse.json({
+      return NextResponse.json({ 
         error: 'Error al procesar con IA',
-        tasks: []
+        tasks: [] 
       }, { status: 500 })
     }
 
     const parseResult = await parseResponse.json()
-
+    
+    // Extract JSON from the response
     let responseText = ''
     if (Array.isArray(parseResult) && parseResult[0]?.generated_text) {
       responseText = parseResult[0].generated_text
     } else if (typeof parseResult === 'string') {
       responseText = parseResult
+    } else {
+      responseText = JSON.stringify(parseResult)
     }
 
+    // Try to extract JSON from the response
     const jsonMatch = responseText.match(/\{[\s\S]*"tasks"[\s\S]*\}/)
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[0])
         return NextResponse.json(parsed)
       } catch {
-        return NextResponse.json({ tasks: [], raw: responseText })
+        // If JSON parsing fails, return empty tasks
       }
     }
 
-    return NextResponse.json({ tasks: [], raw: responseText })
+    return NextResponse.json({ 
+      tasks: [],
+      raw: responseText 
+    })
 
   } catch (error) {
     console.error('Error processing file:', error)
-    return NextResponse.json({
+    return NextResponse.json({ 
       error: 'Error al procesar el archivo',
-      tasks: []
+      tasks: [] 
     }, { status: 500 })
   }
 }
