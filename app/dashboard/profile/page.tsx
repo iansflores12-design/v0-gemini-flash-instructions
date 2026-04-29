@@ -1,19 +1,130 @@
-import { createClient } from '@/lib/supabase/server'
-import { User, BookOpen, Settings, Key } from 'lucide-react'
-import { LogoutButton } from '@/components/logout-button'
-import { ApiKeyManager } from '@/components/api-key-manager'
-import Link from 'next/link'
+'use client'
 
-export default async function ProfilePage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+import { useState, useEffect } from 'react'
+import { User, BookOpen, Key, Palette, Check, ChevronDown, ChevronRight, LogOut } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
+import { themes, getThemeById, getDefaultTheme, type Theme } from '@/lib/themes'
 
-  // Get profile with API key
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user?.id)
-    .single()
+export default function ProfilePage() {
+  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [showThemes, setShowThemes] = useState(false)
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [apiKey, setApiKey] = useState('')
+  const [savingKey, setSavingKey] = useState(false)
+  const [customColor, setCustomColor] = useState('#6750A4')
+  const [useCustomColor, setUseCustomColor] = useState(false)
+  const [currentTheme, setCurrentTheme] = useState<Theme>(getDefaultTheme())
+  const router = useRouter()
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        setProfile(profile)
+      }
+      
+      // Load theme from localStorage
+      const savedThemeId = localStorage.getItem('cleargrade-theme')
+      if (savedThemeId) {
+        const savedTheme = getThemeById(savedThemeId)
+        if (savedTheme) setCurrentTheme(savedTheme)
+      }
+      
+      // Load custom color from localStorage
+      const savedCustomColor = localStorage.getItem('cleargrade-custom-color')
+      const savedUseCustom = localStorage.getItem('cleargrade-use-custom-color')
+      if (savedCustomColor) setCustomColor(savedCustomColor)
+      if (savedUseCustom === 'true') setUseCustomColor(true)
+      
+      setLoading(false)
+    }
+    fetchData()
+  }, [])
+
+  const applyTheme = (theme: Theme) => {
+    const root = document.documentElement
+    const cssLines = theme.css.split('\n').filter(line => line.trim().startsWith('--'))
+    cssLines.forEach(line => {
+      const [prop, value] = line.split(':').map(s => s.trim().replace(';', ''))
+      if (prop && value) {
+        root.style.setProperty(prop, value)
+      }
+    })
+    root.setAttribute('data-theme', theme.id)
+  }
+
+  const setTheme = (themeId: string) => {
+    const newTheme = getThemeById(themeId)
+    if (newTheme) {
+      setCurrentTheme(newTheme)
+      applyTheme(newTheme)
+      localStorage.setItem('cleargrade-theme', themeId)
+    }
+  }
+
+  const handleSaveApiKey = async () => {
+    if (!user) return
+    setSavingKey(true)
+    const supabase = createClient()
+    await supabase
+      .from('profiles')
+      .update({ gemini_api_key: apiKey })
+      .eq('id', user.id)
+    setProfile({ ...profile, gemini_api_key: apiKey })
+    setShowApiKey(false)
+    setSavingKey(false)
+  }
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/auth/login')
+  }
+
+  const handleCustomColorChange = (color: string) => {
+    setCustomColor(color)
+    localStorage.setItem('cleargrade-custom-color', color)
+    if (useCustomColor) {
+      applyCustomColor(color)
+    }
+  }
+
+  const applyCustomColor = (color: string) => {
+    const root = document.documentElement
+    // Simple hex to CSS color
+    root.style.setProperty('--primary', color)
+    root.style.setProperty('--ring', color)
+  }
+
+  const toggleUseCustomColor = () => {
+    const newValue = !useCustomColor
+    setUseCustomColor(newValue)
+    localStorage.setItem('cleargrade-use-custom-color', String(newValue))
+    if (newValue) {
+      applyCustomColor(customColor)
+    } else {
+      applyTheme(currentTheme)
+    }
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </main>
+    )
+  }
 
   const fullName = user?.user_metadata?.full_name || profile?.full_name || 'Usuario'
   const email = user?.email || ''
@@ -35,12 +146,12 @@ export default async function ProfilePage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Perfil</h1>
-            <p className="text-sm text-muted-foreground">Tu cuenta</p>
+            <p className="text-sm text-muted-foreground">Tu cuenta y ajustes</p>
           </div>
         </div>
       </header>
 
-      <div className="px-4 space-y-6">
+      <div className="px-4 space-y-4">
         {/* Profile Card */}
         <div className="p-6 rounded-2xl bg-card border border-border text-center">
           <div className="w-20 h-20 rounded-full bg-primary mx-auto mb-4 flex items-center justify-center">
@@ -52,39 +163,161 @@ export default async function ProfilePage() {
           <p className="text-muted-foreground mt-1">{email}</p>
         </div>
 
-        {/* API Key Section */}
-        <div className="p-4 rounded-2xl bg-card border border-border">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-              <Key className="w-5 h-5 text-accent" />
+        {/* Theme Section */}
+        <div className="rounded-2xl bg-card border border-border overflow-hidden">
+          <button
+            onClick={() => setShowThemes(!showThemes)}
+            className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Palette className="w-5 h-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <p className="font-medium text-foreground">Tema</p>
+                <p className="text-sm text-muted-foreground">{currentTheme.name}</p>
+              </div>
             </div>
-            <div>
-              <p className="font-medium text-foreground">Gemini API Key</p>
-              <p className="text-sm text-muted-foreground">
-                {hasApiKey ? 'Configurada' : 'No configurada'}
-              </p>
+            {showThemes ? (
+              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            )}
+          </button>
+
+          {showThemes && (
+            <div className="p-4 pt-0 space-y-4">
+              {/* Custom Color Toggle */}
+              <div className="p-4 rounded-xl bg-secondary/50">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="font-medium text-foreground text-sm">Color personalizado</p>
+                    <p className="text-xs text-muted-foreground">
+                      Si tu telefono no tiene Monet, usa tu propio color
+                    </p>
+                  </div>
+                  <button
+                    onClick={toggleUseCustomColor}
+                    className={`w-12 h-7 rounded-full transition-colors flex items-center px-1 ${
+                      useCustomColor ? 'bg-primary justify-end' : 'bg-border justify-start'
+                    }`}
+                  >
+                    <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
+                  </button>
+                </div>
+                {useCustomColor && (
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={customColor}
+                      onChange={(e) => handleCustomColorChange(e.target.value)}
+                      className="w-12 h-10 rounded-lg border-0 cursor-pointer"
+                    />
+                    <div 
+                      className="flex-1 h-10 rounded-xl flex items-center justify-center text-sm font-medium text-white"
+                      style={{ backgroundColor: customColor }}
+                    >
+                      {customColor.toUpperCase()}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Theme Grid */}
+              <div className="grid grid-cols-2 gap-2">
+                {themes.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setTheme(t.id)}
+                    className={`relative p-3 rounded-xl border-2 transition-all text-left ${
+                      currentTheme.id === t.id 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="flex gap-1 mb-2">
+                      <div 
+                        className="w-5 h-5 rounded-full" 
+                        style={{ backgroundColor: t.preview.primary }}
+                      />
+                      <div 
+                        className="w-5 h-5 rounded-full" 
+                        style={{ backgroundColor: t.preview.secondary }}
+                      />
+                      <div 
+                        className="w-5 h-5 rounded-full" 
+                        style={{ backgroundColor: t.preview.accent }}
+                      />
+                    </div>
+                    <p className="font-medium text-foreground text-xs">{t.name}</p>
+                    {currentTheme.id === t.id && (
+                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="w-3 h-3 text-primary-foreground" />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          <ApiKeyManager currentHasKey={hasApiKey} />
+          )}
         </div>
 
-        {/* Settings Link */}
-        <Link 
-          href="/dashboard/settings"
-          className="flex items-center gap-3 p-4 rounded-2xl bg-card border border-border hover:bg-secondary/50 transition-colors"
-        >
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Settings className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="font-medium text-foreground">Ajustes</p>
-            <p className="text-sm text-muted-foreground">Temas y personalizacion</p>
-          </div>
-        </Link>
+        {/* API Key Section */}
+        <div className="rounded-2xl bg-card border border-border overflow-hidden">
+          <button
+            onClick={() => setShowApiKey(!showApiKey)}
+            className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                <Key className="w-5 h-5 text-accent" />
+              </div>
+              <div className="text-left">
+                <p className="font-medium text-foreground">Gemini API Key</p>
+                <p className="text-sm text-muted-foreground">
+                  {hasApiKey ? 'Configurada' : 'No configurada'}
+                </p>
+              </div>
+            </div>
+            {showApiKey ? (
+              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            )}
+          </button>
+
+          {showApiKey && (
+            <div className="p-4 pt-0 space-y-3">
+              <div className="p-3 rounded-xl bg-secondary/50 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">Como obtener tu API Key:</p>
+                <ol className="list-decimal list-inside space-y-1 text-xs">
+                  <li>Ve a <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" className="text-primary underline">Google AI Studio</a></li>
+                  <li>Inicia sesion con tu cuenta de Google</li>
+                  <li>Haz clic en {"\"Crear API Key\""}</li>
+                  <li>Copia la clave y pegala aqui</li>
+                </ol>
+              </div>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Pega tu API Key aqui..."
+                className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground"
+              />
+              <button
+                onClick={handleSaveApiKey}
+                disabled={savingKey || !apiKey.trim()}
+                className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-medium disabled:opacity-50"
+              >
+                {savingKey ? 'Guardando...' : 'Guardar API Key'}
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* App Info */}
         <div className="p-4 rounded-2xl bg-card border border-border">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-primary-foreground" />
             </div>
@@ -93,13 +326,16 @@ export default async function ProfilePage() {
               <p className="text-sm text-muted-foreground">Version 1.0</p>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Tu asistente de estudio inteligente. Organiza tus tareas y materiales con ayuda de IA.
-          </p>
         </div>
 
         {/* Logout */}
-        <LogoutButton />
+        <button 
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl bg-destructive/10 text-destructive font-medium hover:bg-destructive/20 transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          Cerrar sesion
+        </button>
       </div>
     </main>
   )

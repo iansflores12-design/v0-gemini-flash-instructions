@@ -2,14 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, ListTodo, BookOpen, User, Settings } from 'lucide-react'
+import { Home, ListTodo, BookOpen, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Inicio' },
   { href: '/dashboard/tasks', icon: ListTodo, label: 'Tareas' },
   { href: '/dashboard/subjects', icon: BookOpen, label: 'Materias' },
-  { href: '/dashboard/settings', icon: Settings, label: 'Ajustes' },
   { href: '/dashboard/profile', icon: User, label: 'Perfil' },
 ]
 

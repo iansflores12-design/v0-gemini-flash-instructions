@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { format, isToday, isTomorrow, isPast, parseISO, startOfWeek, endOfWeek, isWithinInterval, addWeeks } from 'date-fns'
+import { format, isToday, isTomorrow, isPast, parseISO, startOfWeek, endOfWeek, isWithinInterval, addWeeks, differenceInDays } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Check, ChevronRight, ChevronDown, Package, Trash2, Loader2, Calendar, ExternalLink } from 'lucide-react'
+import { Check, ChevronRight, ChevronDown, Package, Trash2, Loader2, Calendar, ExternalLink, Clock, Award } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toggleTaskDone, deleteTask } from '@/lib/actions'
 import type { Task } from '@/lib/types'
@@ -14,47 +14,56 @@ interface TaskListProps {
 }
 
 interface WeekGroup {
+  weekNumber: number
   label: string
   startDate: Date
   endDate: Date
   tasks: Task[]
-  materials: { name: string; quantity: string | null; subjectColor: string }[]
+  materials: { name: string; quantity: string | null; subjectName: string; subjectColor: string }[]
 }
 
 export function TaskList({ tasks, showViewAll }: TaskListProps) {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set())
-  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set(['current']))
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set(['Esta semana', 'Atrasadas']))
 
   // Group tasks by week
   const weekGroups = useMemo(() => {
     const today = new Date()
     const groups: WeekGroup[] = []
     
-    // Create week buckets for the next 8 weeks
-    for (let i = 0; i < 8; i++) {
+    // Create week buckets for the next 12 weeks
+    for (let i = 0; i < 12; i++) {
       const weekStart = startOfWeek(addWeeks(today, i), { weekStartsOn: 1 })
       const weekEnd = endOfWeek(addWeeks(today, i), { weekStartsOn: 1 })
       
       const weekTasks = tasks.filter(task => {
         const dueDate = parseISO(task.due_date)
-        return isWithinInterval(dueDate, { start: weekStart, end: weekEnd })
+        return isWithinInterval(dueDate, { start: weekStart, end: weekEnd }) && 
+               !(isPast(dueDate) && !isToday(dueDate) && !task.is_done)
       })
 
       if (weekTasks.length > 0 || i === 0) {
-        // Collect materials for this week
-        const materials: { name: string; quantity: string | null; subjectColor: string }[] = []
+        // Collect materials for this week grouped by subject
+        const materials: { name: string; quantity: string | null; subjectName: string; subjectColor: string }[] = []
         weekTasks.forEach(task => {
           task.materials?.forEach(m => {
             materials.push({
               name: m.name,
               quantity: m.quantity,
+              subjectName: task.subject?.name || 'Sin materia',
               subjectColor: task.subject?.color_code || '#6750A4'
             })
           })
         })
 
+        let label = ''
+        if (i === 0) label = 'Esta semana'
+        else if (i === 1) label = 'Proxima semana'
+        else label = `Semana ${i + 1} - ${format(weekStart, "d MMM", { locale: es })}`
+
         groups.push({
-          label: i === 0 ? 'Esta semana' : i === 1 ? 'Proxima semana' : format(weekStart, "'Semana del' d 'de' MMMM", { locale: es }),
+          weekNumber: i + 1,
+          label,
           startDate: weekStart,
           endDate: weekEnd,
           tasks: weekTasks,
@@ -71,6 +80,7 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
 
     if (overdueTasks.length > 0) {
       groups.unshift({
+        weekNumber: 0,
         label: 'Atrasadas',
         startDate: new Date(0),
         endDate: new Date(0),
@@ -79,15 +89,7 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
       })
     }
 
-    return groups
-  }, [tasks])
-
-  // Separate done and pending tasks
-  const { pendingTasks, doneTasks } = useMemo(() => {
-    return {
-      pendingTasks: tasks.filter(t => !t.is_done),
-      doneTasks: tasks.filter(t => t.is_done)
-    }
+    return groups.filter(g => g.tasks.length > 0 || g.label === 'Esta semana')
   }, [tasks])
 
   const toggleWeek = (weekLabel: string) => {
@@ -135,7 +137,12 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
           {/* Week Header */}
           <button
             onClick={() => toggleWeek(week.label)}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors"
+            className={cn(
+              'w-full flex items-center justify-between p-3 rounded-xl transition-colors',
+              week.label === 'Atrasadas' 
+                ? 'bg-destructive/10 hover:bg-destructive/15' 
+                : 'bg-secondary/50 hover:bg-secondary'
+            )}
           >
             <div className="flex items-center gap-2">
               {expandedWeeks.has(week.label) ? (
@@ -143,13 +150,20 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
               ) : (
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
               )}
-              <span className="font-semibold text-foreground">{week.label}</span>
-              <span className="text-sm text-muted-foreground">
-                ({week.tasks.filter(t => !t.is_done).length} pendientes)
-              </span>
+              <div className="text-left">
+                <span className={cn(
+                  'font-semibold',
+                  week.label === 'Atrasadas' ? 'text-destructive' : 'text-foreground'
+                )}>
+                  {week.label}
+                </span>
+                <span className="text-sm text-muted-foreground ml-2">
+                  {week.tasks.filter(t => !t.is_done).length} pendientes
+                </span>
+              </div>
             </div>
             {week.label === 'Atrasadas' && (
-              <span className="px-2 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-medium">
+              <span className="px-2 py-1 rounded-full bg-destructive text-destructive-foreground text-xs font-medium">
                 Urgente
               </span>
             )}
@@ -161,23 +175,39 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
               {week.materials.length > 0 && (
                 <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant">
                   <div className="flex items-center gap-2 mb-3">
-                    <Package className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-medium text-foreground">Materiales de la semana</span>
+                    <Package className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-semibold text-foreground">
+                      Materiales de la {week.label.toLowerCase()}
+                    </span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {week.materials.map((m, i) => (
-                      <span 
-                        key={i}
-                        className="text-xs px-3 py-1.5 rounded-full border"
-                        style={{ 
-                          borderColor: m.subjectColor,
-                          backgroundColor: `${m.subjectColor}10`
-                        }}
-                      >
-                        {m.quantity ? `${m.quantity} ` : ''}{m.name}
-                      </span>
-                    ))}
-                  </div>
+                  {/* Group materials by subject */}
+                  {Object.entries(
+                    week.materials.reduce((acc, m) => {
+                      if (!acc[m.subjectName]) acc[m.subjectName] = { color: m.subjectColor, items: [] }
+                      acc[m.subjectName].items.push(m)
+                      return acc
+                    }, {} as Record<string, { color: string; items: typeof week.materials }>)
+                  ).map(([subjectName, { color, items }]) => (
+                    <div key={subjectName} className="mb-2 last:mb-0">
+                      <p className="text-xs font-medium mb-1.5" style={{ color }}>
+                        {subjectName}:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {items.map((m, i) => (
+                          <span 
+                            key={i}
+                            className="text-xs px-2.5 py-1 rounded-lg border"
+                            style={{ 
+                              borderColor: color,
+                              backgroundColor: `${color}10`
+                            }}
+                          >
+                            {m.quantity ? `${m.quantity} ` : ''}{m.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -186,6 +216,7 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
                 <TaskCard 
                   key={task.id} 
                   task={task} 
+                  weekNumber={week.weekNumber}
                   isExpanded={expandedTasks.has(task.id)}
                   onToggleExpand={() => toggleTask(task.id)}
                 />
@@ -198,7 +229,8 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
                   {week.tasks.filter(t => t.is_done).map((task) => (
                     <TaskCard 
                       key={task.id} 
-                      task={task} 
+                      task={task}
+                      weekNumber={week.weekNumber}
                       isExpanded={expandedTasks.has(task.id)}
                       onToggleExpand={() => toggleTask(task.id)}
                     />
@@ -225,10 +257,12 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
 
 function TaskCard({ 
   task, 
+  weekNumber,
   isExpanded, 
   onToggleExpand 
 }: { 
   task: Task
+  weekNumber: number
   isExpanded: boolean
   onToggleExpand: () => void
 }) {
@@ -237,8 +271,15 @@ function TaskCard({
 
   const dueDate = parseISO(task.due_date)
   const isOverdue = isPast(dueDate) && !isToday(dueDate) && !task.is_done
+  const daysUntilDue = differenceInDays(dueDate, new Date())
 
   const getDateLabel = () => {
+    if (isToday(dueDate)) return 'Hoy'
+    if (isTomorrow(dueDate)) return 'Manana'
+    return format(dueDate, "EEEE d 'de' MMMM", { locale: es })
+  }
+
+  const getShortDateLabel = () => {
     if (isToday(dueDate)) return 'Hoy'
     if (isTomorrow(dueDate)) return 'Manana'
     return format(dueDate, 'd MMM', { locale: es })
@@ -279,7 +320,7 @@ function TaskCard({
         task.is_done 
           ? 'border-border opacity-60' 
           : isOverdue 
-            ? 'border-destructive/30 bg-destructive/5'
+            ? 'border-destructive/50 bg-destructive/5'
             : 'border-border'
       )}
       style={{ borderLeftWidth: '4px', borderLeftColor: subjectColor }}
@@ -321,7 +362,7 @@ function TaskCard({
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               {task.subject && (
                 <span 
-                  className="text-xs px-2 py-0.5 rounded-full"
+                  className="text-xs px-2 py-0.5 rounded-full font-medium"
                   style={{ 
                     backgroundColor: `${subjectColor}20`,
                     color: subjectColor 
@@ -331,10 +372,11 @@ function TaskCard({
                 </span>
               )}
               <span className={cn(
-                'text-xs',
+                'text-xs flex items-center gap-1',
                 isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'
               )}>
-                {getDateLabel()}
+                <Clock className="w-3 h-3" />
+                {getShortDateLabel()}
               </span>
               {task.materials && task.materials.length > 0 && (
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -346,7 +388,7 @@ function TaskCard({
           </div>
 
           <ChevronDown className={cn(
-            'w-5 h-5 text-muted-foreground transition-transform',
+            'w-5 h-5 text-muted-foreground transition-transform flex-shrink-0',
             isExpanded && 'rotate-180'
           )} />
         </div>
@@ -354,23 +396,78 @@ function TaskCard({
 
       {/* Expanded content */}
       {isExpanded && (
-        <div className="px-4 pb-4 pt-0 border-t border-border/50">
+        <div className="px-4 pb-4 pt-0 border-t border-border/50 space-y-4">
+          {/* Task Details Grid */}
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            {/* Week */}
+            <div className="p-3 rounded-xl bg-secondary/50">
+              <p className="text-xs text-muted-foreground mb-1">Semana</p>
+              <p className="font-semibold text-foreground">
+                {weekNumber === 0 ? 'Atrasada' : `Semana ${weekNumber}`}
+              </p>
+            </div>
+            
+            {/* Due Date */}
+            <div className="p-3 rounded-xl bg-secondary/50">
+              <p className="text-xs text-muted-foreground mb-1">Fecha de entrega</p>
+              <p className={cn(
+                'font-semibold',
+                isOverdue ? 'text-destructive' : 'text-foreground'
+              )}>
+                {getDateLabel()}
+              </p>
+            </div>
+
+            {/* Days remaining */}
+            <div className="p-3 rounded-xl bg-secondary/50">
+              <p className="text-xs text-muted-foreground mb-1">Tiempo restante</p>
+              <p className={cn(
+                'font-semibold',
+                daysUntilDue < 0 ? 'text-destructive' : daysUntilDue <= 2 ? 'text-warning' : 'text-foreground'
+              )}>
+                {daysUntilDue < 0 
+                  ? `${Math.abs(daysUntilDue)} dias atrasada`
+                  : daysUntilDue === 0 
+                    ? 'Hoy' 
+                    : `${daysUntilDue} dias`
+                }
+              </p>
+            </div>
+
+            {/* Subject */}
+            <div className="p-3 rounded-xl bg-secondary/50">
+              <p className="text-xs text-muted-foreground mb-1">Materia</p>
+              <p className="font-semibold" style={{ color: subjectColor }}>
+                {task.subject?.name || 'Sin materia'}
+              </p>
+            </div>
+          </div>
+
+          {/* Description */}
           {task.description && (
-            <p className="text-sm text-muted-foreground mt-3 mb-3">
-              {task.description}
-            </p>
+            <div className="p-3 rounded-xl bg-secondary/30">
+              <p className="text-xs text-muted-foreground mb-1">Descripcion</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">
+                {task.description}
+              </p>
+            </div>
           )}
 
+          {/* Materials */}
           {task.materials && task.materials.length > 0 && (
-            <div className="mb-4">
-              <p className="text-xs font-medium text-foreground mb-2">Materiales:</p>
+            <div className="p-3 rounded-xl bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Package className="w-4 h-4 text-primary" />
+                <p className="text-xs font-semibold text-primary">Materiales necesarios</p>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {task.materials.map((m, i) => (
                   <span 
                     key={i}
-                    className="text-xs px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant"
+                    className="text-sm px-3 py-1.5 rounded-lg bg-card border border-border text-foreground"
                   >
-                    {m.quantity ? `${m.quantity} ` : ''}{m.name}
+                    {m.quantity ? <span className="font-medium">{m.quantity}</span> : null}
+                    {m.quantity ? ' ' : ''}{m.name}
                   </span>
                 ))}
               </div>
@@ -378,7 +475,7 @@ function TaskCard({
           )}
 
           {/* Action buttons */}
-          <div className="flex gap-2 mt-3">
+          <div className="flex gap-2">
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -397,7 +494,7 @@ function TaskCard({
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  {task.is_done ? 'Desmarcar' : 'Marcar hecha'}
+                  {task.is_done ? 'Desmarcar' : 'Completar'}
                 </>
               )}
             </button>
@@ -407,7 +504,8 @@ function TaskCard({
                 e.stopPropagation()
                 addToGoogleCalendar()
               }}
-              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-sm font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+              title="Agregar a Google Calendar"
             >
               <Calendar className="w-4 h-4" />
               <ExternalLink className="w-3 h-3" />
@@ -420,6 +518,7 @@ function TaskCard({
               }}
               disabled={deleting}
               className="p-2.5 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+              title="Eliminar tarea"
             >
               {deleting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
