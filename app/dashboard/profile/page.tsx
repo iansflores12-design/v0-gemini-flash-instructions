@@ -100,11 +100,59 @@ export default function ProfilePage() {
     }
   }
 
+  const hexToHue = (hex: string): number => {
+    const r = parseInt(hex.slice(1, 3), 16) / 255
+    const g = parseInt(hex.slice(3, 5), 16) / 255
+    const b = parseInt(hex.slice(5, 7), 16) / 255
+    
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    
+    let h = 0
+    if (max !== min) {
+      if (max === r) h = ((g - b) / (max - min)) * 60
+      else if (max === g) h = (2 + (b - r) / (max - min)) * 60
+      else h = (4 + (r - g) / (max - min)) * 60
+      if (h < 0) h += 360
+    }
+    return h
+  }
+
   const applyCustomColor = (color: string) => {
     const root = document.documentElement
-    // Simple hex to CSS color
-    root.style.setProperty('--primary', color)
-    root.style.setProperty('--ring', color)
+    const hue = hexToHue(color)
+    
+    // Generate full color palette based on custom hue (Material 3 Monet style)
+    root.style.setProperty('--background', `oklch(0.98 0.005 ${hue})`)
+    root.style.setProperty('--foreground', `oklch(0.15 0.02 ${hue})`)
+    root.style.setProperty('--card', `oklch(1 0 0)`)
+    root.style.setProperty('--card-foreground', `oklch(0.15 0.02 ${hue})`)
+    root.style.setProperty('--popover', `oklch(1 0 0)`)
+    root.style.setProperty('--popover-foreground', `oklch(0.15 0.02 ${hue})`)
+    root.style.setProperty('--primary', `oklch(0.45 0.18 ${hue})`)
+    root.style.setProperty('--primary-foreground', `oklch(0.98 0.005 ${hue})`)
+    root.style.setProperty('--secondary', `oklch(0.92 0.03 ${hue})`)
+    root.style.setProperty('--secondary-foreground', `oklch(0.25 0.08 ${hue})`)
+    root.style.setProperty('--muted', `oklch(0.95 0.01 ${hue})`)
+    root.style.setProperty('--muted-foreground', `oklch(0.45 0.02 ${hue})`)
+    root.style.setProperty('--accent', `oklch(0.90 0.04 ${hue})`)
+    root.style.setProperty('--accent-foreground', `oklch(0.20 0.06 ${hue})`)
+    root.style.setProperty('--border', `oklch(0.90 0.02 ${hue})`)
+    root.style.setProperty('--input', `oklch(0.95 0.01 ${hue})`)
+    root.style.setProperty('--ring', `oklch(0.45 0.18 ${hue})`)
+    root.style.setProperty('--surface-container', `oklch(0.96 0.008 ${hue})`)
+    root.style.setProperty('--surface-container-high', `oklch(0.94 0.01 ${hue})`)
+    root.style.setProperty('--on-surface-variant', `oklch(0.45 0.02 ${hue})`)
+    root.style.setProperty('--outline', `oklch(0.78 0.015 ${hue})`)
+    root.style.setProperty('--outline-variant', `oklch(0.88 0.01 ${hue})`)
+    root.style.setProperty('--sidebar', `oklch(0.98 0.005 ${hue})`)
+    root.style.setProperty('--sidebar-foreground', `oklch(0.15 0.02 ${hue})`)
+    root.style.setProperty('--sidebar-primary', `oklch(0.45 0.18 ${hue})`)
+    root.style.setProperty('--sidebar-primary-foreground', `oklch(0.98 0.005 ${hue})`)
+    root.style.setProperty('--sidebar-accent', `oklch(0.92 0.03 ${hue})`)
+    root.style.setProperty('--sidebar-accent-foreground', `oklch(0.25 0.08 ${hue})`)
+    root.style.setProperty('--sidebar-border', `oklch(0.90 0.02 ${hue})`)
+    root.style.setProperty('--sidebar-ring', `oklch(0.45 0.18 ${hue})`)
   }
 
   const toggleUseCustomColor = () => {

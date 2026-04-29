@@ -13,19 +13,14 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
-// Convert hex to OKLCH (simplified conversion)
-function hexToOklch(hex: string): string {
+// Convert hex to hue value for OKLCH
+function hexToHue(hex: string): number {
   const r = parseInt(hex.slice(1, 3), 16) / 255
   const g = parseInt(hex.slice(3, 5), 16) / 255
   const b = parseInt(hex.slice(5, 7), 16) / 255
   
-  // Simple luminance calculation
-  const l = 0.2126 * r + 0.7152 * g + 0.0722 * b
-  
-  // Simplified chroma and hue
   const max = Math.max(r, g, b)
   const min = Math.min(r, g, b)
-  const c = (max - min) * 0.15
   
   let h = 0
   if (max !== min) {
@@ -35,7 +30,7 @@ function hexToOklch(hex: string): string {
     if (h < 0) h += 360
   }
   
-  return `oklch(${(0.3 + l * 0.3).toFixed(2)} ${c.toFixed(2)} ${h.toFixed(0)})`
+  return h
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -77,11 +72,40 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const applyCustomColor = (color: string) => {
     const root = document.documentElement
-    const oklchColor = hexToOklch(color)
-    root.style.setProperty('--primary', oklchColor)
-    // Also set a lighter version for hover states
-    const lighterOklch = oklchColor.replace(/oklch\(([\d.]+)/, (_, l) => `oklch(${(parseFloat(l) + 0.1).toFixed(2)}`)
-    root.style.setProperty('--ring', oklchColor)
+    const hue = hexToHue(color)
+    
+    // Generate full color palette based on custom hue (Material 3 Monet style)
+    // Light mode colors
+    root.style.setProperty('--background', `oklch(0.98 0.005 ${hue})`)
+    root.style.setProperty('--foreground', `oklch(0.15 0.02 ${hue})`)
+    root.style.setProperty('--card', `oklch(1 0 0)`)
+    root.style.setProperty('--card-foreground', `oklch(0.15 0.02 ${hue})`)
+    root.style.setProperty('--popover', `oklch(1 0 0)`)
+    root.style.setProperty('--popover-foreground', `oklch(0.15 0.02 ${hue})`)
+    root.style.setProperty('--primary', `oklch(0.45 0.18 ${hue})`)
+    root.style.setProperty('--primary-foreground', `oklch(0.98 0.005 ${hue})`)
+    root.style.setProperty('--secondary', `oklch(0.92 0.03 ${hue})`)
+    root.style.setProperty('--secondary-foreground', `oklch(0.25 0.08 ${hue})`)
+    root.style.setProperty('--muted', `oklch(0.95 0.01 ${hue})`)
+    root.style.setProperty('--muted-foreground', `oklch(0.45 0.02 ${hue})`)
+    root.style.setProperty('--accent', `oklch(0.90 0.04 ${hue})`)
+    root.style.setProperty('--accent-foreground', `oklch(0.20 0.06 ${hue})`)
+    root.style.setProperty('--border', `oklch(0.90 0.02 ${hue})`)
+    root.style.setProperty('--input', `oklch(0.95 0.01 ${hue})`)
+    root.style.setProperty('--ring', `oklch(0.45 0.18 ${hue})`)
+    root.style.setProperty('--surface-container', `oklch(0.96 0.008 ${hue})`)
+    root.style.setProperty('--surface-container-high', `oklch(0.94 0.01 ${hue})`)
+    root.style.setProperty('--on-surface-variant', `oklch(0.45 0.02 ${hue})`)
+    root.style.setProperty('--outline', `oklch(0.78 0.015 ${hue})`)
+    root.style.setProperty('--outline-variant', `oklch(0.88 0.01 ${hue})`)
+    root.style.setProperty('--sidebar', `oklch(0.98 0.005 ${hue})`)
+    root.style.setProperty('--sidebar-foreground', `oklch(0.15 0.02 ${hue})`)
+    root.style.setProperty('--sidebar-primary', `oklch(0.45 0.18 ${hue})`)
+    root.style.setProperty('--sidebar-primary-foreground', `oklch(0.98 0.005 ${hue})`)
+    root.style.setProperty('--sidebar-accent', `oklch(0.92 0.03 ${hue})`)
+    root.style.setProperty('--sidebar-accent-foreground', `oklch(0.25 0.08 ${hue})`)
+    root.style.setProperty('--sidebar-border', `oklch(0.90 0.02 ${hue})`)
+    root.style.setProperty('--sidebar-ring', `oklch(0.45 0.18 ${hue})`)
   }
 
   const setTheme = (themeId: string) => {
