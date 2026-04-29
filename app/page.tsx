@@ -126,10 +126,20 @@ export default async function LandingPage() {
       <footer className="px-4 py-10 border-t border-border">
         <div className="max-w-md mx-auto text-center">
           <div 
-            className="text-lg font-bold text-muted-foreground tracking-wide"
+            className="flex items-center justify-center gap-3 text-lg font-bold text-muted-foreground tracking-wide"
             style={{ fontFamily: "'Kollektif', 'Google Sans', sans-serif" }}
           >
-            by tree os
+            <img
+              src="/tree-os-light.svg"
+              alt="tree os"
+              className="w-8 h-8 dark:hidden"
+            />
+            <img
+              src="/tree-os-dark.svg"
+              alt="tree os"
+              className="w-8 h-8 hidden dark:block"
+            />
+            <span>by tree os</span>
           </div>
         </div>
       </footer>
