@@ -60,8 +60,13 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
     setError(null)
     
     try {
+      // Get current user ID
+      const { data: { user } } = await (await import('@/lib/supabase/client')).createClient().auth.getUser()
+      if (!user) throw new Error('No autenticado')
+      
       const formData = new FormData()
       formData.append('pdf', selectedFile)
+      formData.append('userId', user.id)
       
       const response = await fetch('/api/parse-pdf', {
         method: 'POST',
@@ -90,17 +95,24 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
     setSaving(true)
     try {
       for (const task of parsedTasks) {
-        await createTaskWithMaterials(
+        const result = await createTaskWithMaterials(
           task.title,
           task.due_date,
           task.subject || undefined,
-          task.materials || [],
-          task.description,
-          task.subject_color
+          task.materials || []
         )
+        
+        // Check if result has error
+        if ('error' in result) {
+          setError(result.error)
+          break
+        }
       }
-      setSelectedFile(null)
-      setParsedTasks([])
+      
+      if (!error) {
+        setSelectedFile(null)
+        setParsedTasks([])
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar')
     } finally {

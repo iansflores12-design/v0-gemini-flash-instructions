@@ -1,7 +1,7 @@
-'use server'
-
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getAdminConfig } from '@/lib/admin-config'
+import { SUBSCRIPTION_LIMITS } from '@/lib/types'
 import type { Task, Subject, Material } from './types'
 
 export async function getSubjects(): Promise<Subject[]> {
@@ -160,11 +160,45 @@ export async function createTaskWithMaterials(
   dueDate: string,
   subjectName: string | undefined,
   materials: { name: string; quantity?: string }[]
-): Promise<Task> {
+): Promise<Task | { error: string; limitExceeded?: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) throw new Error('Not authenticated')
+
+  // Check agenda limits if enabled
+  const config = await getAdminConfig()
+  if (config?.agendaLimitsEnabled) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_plan')
+      .eq('id', user.id)
+      .single()
+
+    const plan = profile?.subscription_plan || 'free'
+    const limits = SUBSCRIPTION_LIMITS[plan]
+    
+    // Check monthly agenda limit
+    const today = new Date()
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString()
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString()
+
+    const { data: agendas } = await supabase
+      .from('subjects')
+      .select('id', { count: 'exact' })
+      .eq('user_id', user.id)
+      .gte('created_at', monthStart)
+      .lte('created_at', monthEnd)
+
+    const agendasThisMonth = agendas?.length || 0
+    
+    if (agendasThisMonth >= limits.agendaPerMonth) {
+      return {
+        error: `Has alcanzado tu limite de ${limits.agendaPerMonth} agendas por mes. Actualiza a Pro o Ultra para mas.`,
+        limitExceeded: true
+      }
+    }
+  }
   
   let subjectId: string | null = null
   

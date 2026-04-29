@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import mammoth from 'mammoth'
+import { getAdminConfig } from '@/lib/admin-config'
+import { createClient } from '@/lib/supabase/server'
+import { SUBSCRIPTION_LIMITS } from '@/lib/types'
 
 // Dynamically import pdf-parse to avoid test file issues
 let pdf: any
@@ -9,74 +12,50 @@ try {
   pdf = null
 }
 
-const HF_TOKEN = process.env.HF_TOKEN || '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'
-const HF_API_URL = 'https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct'
+async function callGeminiAPI(prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [{
+        role: 'user',
+        parts: [{ text: prompt }]
+      }],
+      generationConfig: {
+        maxOutputTokens: 2000,
+        temperature: 0.3,
+        topP: 0.9,
+      }
+    }),
+  })
 
-async function callHFAPI(prompt: string, maxTokens: number, retries = 3): Promise<string> {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    const response = await fetch(HF_API_URL, {
-      headers: {
-        Authorization: `Bearer ${HF_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      method: 'POST',
-      body: JSON.stringify({
-        inputs: prompt,
-        parameters: {
-          max_new_tokens: maxTokens,
-          temperature: 0.3,
-          top_p: 0.9,
-          do_sample: true,
-        },
-      }),
-    })
-
-    if (response.status === 503) {
-      const errorData = await response.json().catch(() => ({}))
-      const estimatedTime = errorData.estimated_time || 20
-      console.log(`Model loading, waiting ${estimatedTime}s (attempt ${attempt}/${retries})...`)
-      await new Promise(resolve => setTimeout(resolve, Math.min(estimatedTime * 1000, 30000)))
-      continue
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`HF API error ${response.status}: ${errorText}`)
-    }
-
-    const rawResponse = await response.text()
-    let result: any
-    try {
-      result = JSON.parse(rawResponse)
-    } catch {
-      throw new Error(`HF API returned non-JSON: ${rawResponse.substring(0, 200)}`)
-    }
-
-    let reply = ''
-    if (Array.isArray(result) && result[0]?.generated_text) {
-      reply = result[0].generated_text
-    } else if (result.generated_text) {
-      reply = result.generated_text
-    } else if (Array.isArray(result) && result[0]?.[0]?.generated_text) {
-      reply = result[0][0].generated_text
-    }
-
-    if (!reply) {
-      throw new Error(`Empty response from HF API: ${rawResponse.substring(0, 200)}`)
-    }
-
-    return reply
+  if (!response.ok) {
+    const errorData = await response.json()
+    throw new Error(`Gemini API error: ${JSON.stringify(errorData)}`)
   }
-  throw new Error('Model failed to load after retries')
+
+  const data = await response.json()
+  if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+    throw new Error('Empty response from Gemini API')
+  }
+
+  return data.candidates[0].content.parts[0].text
 }
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
     const file = formData.get('pdf') as File | null
+    const userId = formData.get('userId') as string | null
     
     if (!file) {
       return NextResponse.json({ error: 'No se subio ningun archivo' }, { status: 400 })
+    }
+
+    if (!userId) {
+      return NextResponse.json({ error: 'userId requerido' }, { status: 400 })
     }
 
     const fileName = file.name.toLowerCase()
@@ -104,18 +83,27 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    // Truncate text to avoid exceeding model context window (~3000 chars for safety)
-    const truncatedText = extractedText.substring(0, 2500) || 'No se pudo extraer texto'
+    // Get admin config
+    const config = await getAdminConfig()
+    if (!config?.geminiApiKey) {
+      return NextResponse.json({ error: 'Gemini no configurado' }, { status: 500 })
+    }
 
-    const prompt = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nAnaliza el siguiente texto de una agenda escolar y extrae las tareas en formato JSON valido. Responde SOLO con el JSON, sin explicaciones.<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nTexto: ${truncatedText}\n\nResponde SOLO con JSON valido:\n{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor","materials":[{"name":"Material","quantity":"1"}]}]}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n`
+    // Truncate text to avoid exceeding model context
+    const truncatedText = extractedText.substring(0, 3000) || 'No se pudo extraer texto'
 
-    const rawParseResult = await callHFAPI(prompt, 2000)
+    const prompt = `Analiza el siguiente texto de una agenda escolar y extrae las tareas en formato JSON valido. Responde SOLO con el JSON, sin explicaciones.
+
+Texto: ${truncatedText}
+
+Responde SOLO con JSON valido en este formato:
+{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor o puntos","materials":[{"name":"Material","quantity":"Cantidad"}]}]}
+
+Asegúrate de que el JSON sea valido.`
+
+    const rawParseResult = await callGeminiAPI(prompt, config.geminiApiKey)
     
-    let responseText = rawParseResult
-      .replace(/<\|eot_id\|>/g, '')
-      .replace(/<\|start_header_id\|>.*?<\|end_header_id\|>/g, '')
-      .replace(/<\|begin_of_text\|>/g, '')
-      .trim()
+    let responseText = rawParseResult.trim()
 
     const jsonMatch = responseText.match(/\{[\s\S]*"tasks"[\s\S]*\}/)
     if (jsonMatch) {
@@ -123,7 +111,7 @@ export async function POST(req: NextRequest) {
         const parsed = JSON.parse(jsonMatch[0])
         return NextResponse.json(parsed)
       } catch {
-        // If JSON parsing fails, return empty tasks
+        console.error('[v0] JSON parse error')
       }
     }
 
@@ -133,7 +121,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error processing file:', error)
+    console.error('[v0] Error processing file:', error)
     return NextResponse.json({ 
       error: 'Error al procesar el archivo',
       tasks: [] 
