@@ -30,18 +30,21 @@ export function LogoImage() {
   if (!mounted) {
     return (
       <img
-        src="/cleargrade-logo.svg"
+        src="/cleargrade-icon-monet.png"
         alt="ClearGrade logo"
-        className="w-20 h-20"
+        className="w-20 h-20 rounded-3xl"
       />
     )
   }
 
   return (
     <img
-      src={isDark ? '/cleargrade-logo-dark.svg' : '/cleargrade-logo.svg'}
+      src="/cleargrade-icon-monet.png"
       alt="ClearGrade logo"
-      className="w-20 h-20 transition-opacity duration-300"
+      className="w-20 h-20 rounded-3xl transition-all duration-300"
+      style={{
+        filter: isDark ? 'brightness(1.2) invert(0.1)' : 'brightness(1)',
+      }}
     />
   )
 }

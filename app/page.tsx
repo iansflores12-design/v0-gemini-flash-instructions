@@ -128,31 +128,21 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Footer with Kollektif font + vector */}
+      {/* Footer with tree logo + Kollektif font */}
       <footer className="px-4 py-10 border-t border-border">
-        <div className="max-w-md mx-auto flex items-center justify-center gap-3">
-          <img
-            src="/cleargrade-logo.svg"
-            alt=""
-            aria-hidden="true"
-            className="w-8 h-8 opacity-60 dark:hidden"
-          />
-          <img
-            src="/cleargrade-logo-dark.svg"
-            alt=""
-            aria-hidden="true"
-            className="w-8 h-8 opacity-60 hidden dark:block"
-          />
-          <span
-            className="text-2xl font-bold text-muted-foreground tracking-wide"
+        <div className="max-w-md mx-auto text-center">
+          <div 
+            className="text-xl font-bold text-muted-foreground tracking-wide flex items-center justify-center gap-2"
             style={{ fontFamily: "'Kollektif', 'Google Sans', sans-serif" }}
           >
-            ClearGrade
-          </span>
+            <img
+              src="/cleargrade-tree-logo.svg"
+              alt="tree os"
+              className="w-6 h-6"
+            />
+            <span>by tree os</span>
+          </div>
         </div>
-        <p className="text-center text-xs text-muted-foreground mt-3 opacity-60">
-          ClearGrade by tree os
-        </p>
       </footer>
     </main>
   )
