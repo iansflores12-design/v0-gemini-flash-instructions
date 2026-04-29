@@ -22,7 +22,7 @@ ${conversationHistory ? `Conversacion previa:\n${conversationHistory}\n\n` : ''}
 Asistente:`
 
     const response = await fetch(
-      'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
+      'https://router.huggingface.co/hf-inference/models/microsoft/Phi-3-mini-4k-instruct',
       {
         headers: {
           Authorization: `Bearer ${HF_TOKEN}`,
