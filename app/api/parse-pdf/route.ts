@@ -10,6 +10,65 @@ try {
 }
 
 const HF_TOKEN = process.env.HF_TOKEN || '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'
+const HF_API_URL = 'https://api-inference.huggingface.co/models/HuggingFaceTB/SmolLM2-1.7B-Instruct'
+
+async function callHFAPI(prompt: string, maxTokens: number, retries = 3): Promise<string> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const response = await fetch(HF_API_URL, {
+      headers: {
+        Authorization: `Bearer ${HF_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      method: 'POST',
+      body: JSON.stringify({
+        inputs: prompt,
+        parameters: {
+          max_new_tokens: maxTokens,
+          temperature: 0.3,
+          top_p: 0.9,
+          do_sample: true,
+        },
+      }),
+    })
+
+    if (response.status === 503) {
+      const errorData = await response.json().catch(() => ({}))
+      const estimatedTime = errorData.estimated_time || 20
+      console.log(`Model loading, waiting ${estimatedTime}s (attempt ${attempt}/${retries})...`)
+      await new Promise(resolve => setTimeout(resolve, Math.min(estimatedTime * 1000, 30000)))
+      continue
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`HF API error ${response.status}: ${errorText}`)
+    }
+
+    const rawResponse = await response.text()
+    let result: any
+    try {
+      result = JSON.parse(rawResponse)
+    } catch {
+      throw new Error(`HF API returned non-JSON: ${rawResponse.substring(0, 200)}`)
+    }
+
+    let reply = ''
+    if (Array.isArray(result) && result[0]?.generated_text) {
+      reply = result[0].generated_text
+    } else if (result.generated_text) {
+      reply = result.generated_text
+    } else if (Array.isArray(result) && result[0]?.[0]?.generated_text) {
+      reply = result[0][0].generated_text
+    }
+
+    if (!reply) {
+      throw new Error(`Empty response from HF API: ${rawResponse.substring(0, 200)}`)
+    }
+
+    return reply
+  }
+  throw new Error('Model failed to load after retries')
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,79 +104,18 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    // Now use a text generation model to parse the agenda
-    const prompt = `[INST] Analiza el siguiente texto de una agenda escolar y extrae las tareas en formato JSON.
-     
-Texto:
-${extractedText || 'No se pudo extraer texto'}
+    // Truncate text to avoid exceeding model context window (~3000 chars for safety)
+    const truncatedText = extractedText.substring(0, 2500) || 'No se pudo extraer texto'
 
-Responde SOLO con JSON valido:
-{
-  "tasks": [
-    {
-      "title": "Nombre de la tarea",
-      "subject": "Materia",
-      "subject_color": "#HEX",
-      "due_date": "YYYY-MM-DD",
-      "description": "Descripcion",
-      "value": "Valor",
-      "materials": [{"name": "Material", "quantity": "1"}]
-    }
-  ]
-} [/INST]`
+    const prompt = `<|system|>\nAnaliza el siguiente texto de una agenda escolar y extrae las tareas en formato JSON valido. Responde SOLO con el JSON, sin explicaciones.<|end|>\n<|user|>\nTexto: ${truncatedText}\n\nResponde SOLO con JSON valido:\n{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor","materials":[{"name":"Material","quantity":"1"}]}]}<|end|>\n<|assistant|>\n`
 
-    const parseResponse = await fetch(
-      'https://api-inference.huggingface.co/microsoft/Phi-3-mini-4k-instruct',
-      {
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        method: 'POST',
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 2000,
-            temperature: 0.3,
-            do_sample: true,
-          }
-        }),
-      }
-    )
-
-    if (!parseResponse.ok) {
-      const errorText = await parseResponse.text()
-      console.error('HF API error:', errorText)
-      return NextResponse.json({ 
-        error: 'Error al procesar con IA',
-        tasks: [] 
-      }, { status: 500 })
-    }
-
-    const contentType = parseResponse.headers.get('content-type')
-    let parseResult
-    if (contentType?.includes('application/json')) {
-      parseResult = await parseResponse.json()
-    } else {
-      const text = await parseResponse.text()
-      console.error('Non-JSON response:', text)
-      return NextResponse.json({ 
-        error: 'Invalid API response',
-        tasks: [] 
-      }, { status: 500 })
-    }
+    const rawParseResult = await callHFAPI(prompt, 2000)
     
-    // Extract JSON from the response
-    let responseText = ''
-    if (Array.isArray(parseResult) && parseResult[0]?.generated_text) {
-      responseText = parseResult[0].generated_text
-    } else if (typeof parseResult === 'string') {
-      responseText = parseResult
-    } else {
-      responseText = JSON.stringify(parseResult)
-    }
+    let responseText = rawParseResult
+      .replace(/<\|(user|assistant|system|end|stop)\|>/g, '')
+      .replace(/<\/s>/g, '')
+      .trim()
 
-    // Try to extract JSON from the response
     const jsonMatch = responseText.match(/\{[\s\S]*"tasks"[\s\S]*\}/)
     if (jsonMatch) {
       try {
