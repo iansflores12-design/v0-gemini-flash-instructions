@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const HF_TOKEN = process.env.HF_TOKEN || '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'
-const HF_API_URL = 'https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta'
+const HF_API_URL = 'https://api-inference.huggingface.co/models/microsoft/Phi-3-mini-4k-instruct'
 
 async function callHFAPI(prompt: string, retries = 3): Promise<string> {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -37,7 +37,13 @@ async function callHFAPI(prompt: string, retries = 3): Promise<string> {
       throw new Error(`HF API error ${response.status}: ${errorText}`)
     }
 
-    const result = await response.json()
+    const rawResponse = await response.text()
+    let result: any
+    try {
+      result = JSON.parse(rawResponse)
+    } catch {
+      throw new Error(`HF API returned non-JSON: ${rawResponse.substring(0, 200)}`)
+    }
 
     let reply = ''
     if (Array.isArray(result) && result[0]?.generated_text) {
@@ -49,7 +55,7 @@ async function callHFAPI(prompt: string, retries = 3): Promise<string> {
     }
 
     if (!reply) {
-      throw new Error('Empty response from HF API')
+      throw new Error(`Empty response from HF API: ${rawResponse.substring(0, 200)}`)
     }
 
     return reply
@@ -70,20 +76,29 @@ export async function POST(req: NextRequest) {
       `<|${msg.role === 'user' ? 'user' : 'assistant'}|>\n${msg.content}`
     ).join('\n') || ''
 
-    const prompt = `<|system|>
-Eres ClearGrade AI, un asistente de estudio amigable y util para estudiantes hispanohablantes. Ayudas con tareas, organizacion y dudas academicas. Responde siempre en espanol de forma clara y concisa.</s>
-${conversationHistory}
-<|user|>
-${message}</s>
-<|assistant|>
-`
+    // Limit conversation to last 5 messages to avoid exceeding HF input limits
+    let systemAndHistory = `<|system|>\nEres ClearGrade AI, un asistente de estudio amigable y util para estudiantes hispanohablantes. Ayudas con tareas, organizacion y dudas academicas. Responde siempre en espanol de forma clara y concisa.<|end|>\n`
+    if (conversationHistory) {
+      systemAndHistory += conversationHistory + '\n'
+    }
+
+    const userPart = `<|user|>\n${message}<|end|>\n<|assistant|>\n`
+
+    // Ensure total prompt stays under ~2500 chars (Phi-3 free tier safety limit)
+    const maxPrompt = 2500
+    if (systemAndHistory.length + userPart.length + 50 > maxPrompt) {
+      const allowedHistory = Math.max(0, maxPrompt - userPart.length - 200)
+      systemAndHistory = `<|system|>\nEres ClearGrade AI, un asistente de estudio para estudiantes hispanohablantes. Responde siempre en espanol.<|end|>\n${conversationHistory.substring(0, allowedHistory)}`
+    }
+
+    const prompt = systemAndHistory + userPart
 
     const rawReply = await callHFAPI(prompt)
 
     // Clean up the response
     let reply = rawReply
       .replace(/^Asistente:\s*/i, '')
-      .replace(/<\|.*?\|>/g, '')
+      .replace(/<\|(user|assistant|system|end|stop)\|>/g, '')
       .replace(/<\/s>/g, '')
       .trim()
 
