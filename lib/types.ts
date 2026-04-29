@@ -4,8 +4,8 @@ export interface Profile {
   full_name: string | null
   theme: string | null
   updated_at: string
-  // Subscription fields
-  subscription_plan: 'free' | 'pro' | 'premium'
+  // Subscription fields - 3 tiers: free, pro, ultra
+  subscription_plan: 'free' | 'pro' | 'ultra'
   subscription_start_date: string | null
   subscription_end_date: string | null
   stripe_customer_id: string | null
@@ -62,44 +62,47 @@ export interface ChatMessage {
   timestamp: Date
 }
 
-// Subscription limits configuration
+// Subscription limits configuration - 3 tiers: free, pro, ultra
 export interface SubscriptionLimits {
-  chatMessagesPerDay: number
-  totalTasksAllowed: number
-  totalSubjectsAllowed: number
-  aiChatEnabled: boolean
+  agendaPerMonth: number
+  chatRequestsPerDay: number
   adsFree: boolean
 }
 
-// Usage tracking
+// Usage tracking for limits
 export interface UserUsage {
   userId: string
-  chatMessagesUsedToday: number
+  chatRequestsUsedToday: number
   lastChatReset: string
-  totalTasksCreated: number
-  totalSubjectsCreated: number
+  agendasCreatedThisMonth: number
+  lastAgendaReset: string
+}
+
+// Admin configuration for feature toggles
+export interface AdminConfig {
+  id: string
+  subscriptionsEnabled: boolean
+  adsEnabled: boolean
+  chatLimitsEnabled: boolean
+  agendaLimitsEnabled: boolean
+  geminiApiKey: string
+  updatedAt: string
 }
 
 export const SUBSCRIPTION_LIMITS: Record<string, SubscriptionLimits> = {
   free: {
-    chatMessagesPerDay: 5,
-    totalTasksAllowed: 50,
-    totalSubjectsAllowed: 10,
-    aiChatEnabled: true,
+    agendaPerMonth: 15,
+    chatRequestsPerDay: 10,
     adsFree: false
   },
   pro: {
-    chatMessagesPerDay: 50,
-    totalTasksAllowed: 500,
-    totalSubjectsAllowed: 100,
-    aiChatEnabled: true,
+    agendaPerMonth: 50,
+    chatRequestsPerDay: 100,
     adsFree: true
   },
-  premium: {
-    chatMessagesPerDay: 500,
-    totalTasksAllowed: 5000,
-    totalSubjectsAllowed: 1000,
-    aiChatEnabled: true,
+  ultra: {
+    agendaPerMonth: 9999, // Unlimited
+    chatRequestsPerDay: 500,
     adsFree: true
   }
 }
