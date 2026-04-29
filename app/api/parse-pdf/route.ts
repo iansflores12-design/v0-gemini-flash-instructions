@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import mammoth from 'mammoth'
 
-const HF_TOKEN = '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'
+const HF_TOKEN = process.env.HF_TOKEN || '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'
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
     const file = formData.get('pdf') as File | null
-    
+
     if (!file) {
       return NextResponse.json({ error: 'No se subio ningun archivo' }, { status: 400 })
     }
@@ -23,66 +23,38 @@ export async function POST(req: NextRequest) {
     let extractedText = ''
 
     if (isDOCX) {
-      // Extract text from DOCX using mammoth
       const arrayBuffer = await file.arrayBuffer()
       const result = await mammoth.extractRawText({ arrayBuffer })
       extractedText = result.value
     } else {
-      // For PDF, we'll use Hugging Face's document-question-answering
-      // First convert to base64
-      const bytes = await file.arrayBuffer()
-      const base64 = Buffer.from(bytes).toString('base64')
-      
-      // Use a text extraction approach with HF
-      const extractResponse = await fetch(
-        'https://api-inference.huggingface.co/models/microsoft/layoutlmv3-base',
-        {
-          headers: {
-            Authorization: `Bearer ${HF_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
-          method: 'POST',
-          body: JSON.stringify({
-            inputs: base64,
-            parameters: { return_full_text: true }
-          }),
-        }
-      )
-      
-      if (extractResponse.ok) {
-        const extractResult = await extractResponse.json()
-        extractedText = typeof extractResult === 'string' ? extractResult : JSON.stringify(extractResult)
-      }
+      return NextResponse.json({
+        error: 'PDF processing requires OCR. Please convert to DOCX or use a different approach.',
+        tasks: []
+      }, { status: 400 })
     }
 
-    // Now use a text generation model to parse the agenda
-    const prompt = `Analiza el siguiente texto de una agenda escolar y extrae las tareas en formato JSON.
+    const prompt = `[INST] Analiza el siguiente texto de una agenda escolar y extrae las tareas en formato JSON.
     
-Texto de la agenda:
-${extractedText || 'No se pudo extraer texto del documento'}
+Texto:
+${extractedText || 'No se pudo extraer texto'}
 
-Responde SOLO con un JSON valido con esta estructura exacta:
+Responde SOLO con JSON valido:
 {
   "tasks": [
     {
       "title": "Nombre de la tarea",
-      "subject": "Nombre de la materia",
-      "subject_color": "#HEX color sugerido para la materia",
+      "subject": "Materia",
+      "subject_color": "#HEX",
       "due_date": "YYYY-MM-DD",
-      "description": "Descripcion de la tarea",
-      "value": "Valor o porcentaje si se menciona",
-      "materials": [
-        { "name": "Material 1", "quantity": "cantidad" }
-      ]
+      "description": "Descripcion",
+      "value": "Valor",
+      "materials": [{"name": "Material", "quantity": "1"}]
     }
   ]
-}
-
-Asigna un color unico a cada materia (usa colores vibrantes como #6750A4, #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD, #98D8C8).
-Si no hay informacion clara, devuelve un array vacio.`
+} [/INST]`
 
     const parseResponse = await fetch(
-      'https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta',
+      'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1',
       {
         headers: {
           Authorization: `Bearer ${HF_TOKEN}`,
@@ -94,7 +66,8 @@ Si no hay informacion clara, devuelve un array vacio.`
           parameters: {
             max_new_tokens: 2000,
             return_full_text: false,
-            temperature: 0.3
+            temperature: 0.3,
+            do_sample: true,
           }
         }),
       }
@@ -103,45 +76,38 @@ Si no hay informacion clara, devuelve un array vacio.`
     if (!parseResponse.ok) {
       const errorText = await parseResponse.text()
       console.error('HF API error:', errorText)
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Error al procesar con IA',
-        tasks: [] 
+        tasks: []
       }, { status: 500 })
     }
 
     const parseResult = await parseResponse.json()
-    
-    // Extract JSON from the response
+
     let responseText = ''
     if (Array.isArray(parseResult) && parseResult[0]?.generated_text) {
       responseText = parseResult[0].generated_text
     } else if (typeof parseResult === 'string') {
       responseText = parseResult
-    } else {
-      responseText = JSON.stringify(parseResult)
     }
 
-    // Try to extract JSON from the response
     const jsonMatch = responseText.match(/\{[\s\S]*"tasks"[\s\S]*\}/)
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[0])
         return NextResponse.json(parsed)
       } catch {
-        // If JSON parsing fails, return empty tasks
+        return NextResponse.json({ tasks: [], raw: responseText })
       }
     }
 
-    return NextResponse.json({ 
-      tasks: [],
-      raw: responseText 
-    })
+    return NextResponse.json({ tasks: [], raw: responseText })
 
   } catch (error) {
     console.error('Error processing file:', error)
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Error al procesar el archivo',
-      tasks: [] 
+      tasks: []
     }, { status: 500 })
   }
 }
