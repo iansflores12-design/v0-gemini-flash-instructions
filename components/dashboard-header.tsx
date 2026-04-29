@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BookOpen } from 'lucide-react'
+import { DarkModeToggle } from '@/components/dark-mode-toggle'
 
 interface DashboardHeaderProps {
   userName: string
@@ -18,6 +18,7 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
   }, [])
 
   const firstName = userName.split(' ')[0]
+  const initial = firstName[0]?.toUpperCase() ?? 'U'
 
   return (
     <header className="px-4 pt-6 pb-4 bg-background">
@@ -26,8 +27,11 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
           <p className="text-sm text-muted-foreground">{greeting}</p>
           <h1 className="text-2xl font-bold text-foreground">{firstName}</h1>
         </div>
-        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-          <BookOpen className="w-5 h-5 text-primary-foreground" />
+        <div className="flex items-center gap-2">
+          <DarkModeToggle />
+          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
+            {initial}
+          </div>
         </div>
       </div>
     </header>

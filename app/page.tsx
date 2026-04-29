@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { BookOpen, Sparkles, CheckCircle2, Calendar, Package, FileUp } from 'lucide-react'
+import { Sparkles, CheckCircle2, Calendar, Package, FileUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { DarkModeToggle } from '@/components/dark-mode-toggle'
 
 export default async function LandingPage() {
   const supabase = await createClient()
@@ -14,15 +15,25 @@ export default async function LandingPage() {
 
   return (
     <main className="min-h-screen bg-background">
+      {/* Top bar with dark mode toggle */}
+      <div className="flex justify-end px-4 pt-4">
+        <DarkModeToggle />
+      </div>
+
       {/* Hero Section */}
-      <section className="px-4 pt-12 pb-16">
+      <section className="px-4 pt-8 pb-16">
         <div className="max-w-md mx-auto text-center">
-          {/* Logo */}
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-primary mb-6 animate-scale-in">
-            <BookOpen className="w-10 h-10 text-primary-foreground" />
+          {/* Logo vector */}
+          <div className="flex items-center justify-center mb-4 animate-scale-in">
+            <img
+              src="/cleargrade-vector.svg"
+              alt="ClearGrade logo"
+              className="w-20 h-20"
+              style={{ filter: 'var(--logo-filter)' }}
+            />
           </div>
 
-          <h1 className="text-4xl font-bold text-foreground mb-3 text-balance animate-slide-up">
+          <h1 className="text-5xl font-bold text-foreground mb-3 text-balance animate-slide-up tracking-tight">
             ClearGrade
           </h1>
 
@@ -120,6 +131,27 @@ export default async function LandingPage() {
           </Link>
         </div>
       </section>
+
+      {/* Footer with Kollektif font + vector */}
+      <footer className="px-4 py-10 border-t border-border">
+        <div className="max-w-md mx-auto flex items-center justify-center gap-3">
+          <img
+            src="/cleargrade-vector.svg"
+            alt=""
+            aria-hidden="true"
+            className="w-8 h-8 opacity-60"
+          />
+          <span
+            className="text-2xl font-bold text-muted-foreground tracking-wide"
+            style={{ fontFamily: "'Kollektif', 'Google Sans', sans-serif" }}
+          >
+            ClearGrade
+          </span>
+        </div>
+        <p className="text-center text-xs text-muted-foreground mt-3 opacity-60">
+          Organiza. Aprende. Destaca.
+        </p>
+      </footer>
     </main>
   )
 }

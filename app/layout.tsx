@@ -54,6 +54,20 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Text:wght@400;500;700&display=swap" 
           rel="stylesheet" 
         />
+        <style dangerouslySetInnerHTML={{ __html: `
+          @font-face {
+            font-family: 'Kollektif';
+            src: url('https://fonts.cdnfonts.com/s/15481/Kollektif.woff') format('woff');
+            font-weight: 400;
+            font-display: swap;
+          }
+          @font-face {
+            font-family: 'Kollektif';
+            src: url('https://fonts.cdnfonts.com/s/15481/Kollektif-Bold.woff') format('woff');
+            font-weight: 700;
+            font-display: swap;
+          }
+        ` }} />
       </head>
       <body className="font-sans antialiased bg-background min-h-screen">
         <ThemeProvider>

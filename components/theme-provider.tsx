@@ -3,12 +3,16 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { themes, getThemeById, getDefaultTheme, type Theme } from '@/lib/themes'
 
+export type DarkMode = 'light' | 'dark' | 'auto'
+
 interface ThemeContextType {
   theme: Theme
   setTheme: (themeId: string) => void
   themes: Theme[]
   customPrimaryColor: string | null
   setCustomPrimaryColor: (color: string | null) => void
+  darkMode: DarkMode
+  setDarkMode: (mode: DarkMode) => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
@@ -36,13 +40,39 @@ function hexToHue(hex: string): number {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(getDefaultTheme())
   const [customPrimaryColor, setCustomPrimaryColorState] = useState<string | null>(null)
+  const [darkMode, setDarkModeState] = useState<DarkMode>('auto')
   const [mounted, setMounted] = useState(false)
+
+  const applyDark = (mode: DarkMode) => {
+    const root = document.documentElement
+    if (mode === 'dark') {
+      root.classList.add('dark')
+    } else if (mode === 'light') {
+      root.classList.remove('dark')
+    } else {
+      // auto: follow system
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      root.classList.toggle('dark', prefersDark)
+    }
+  }
 
   useEffect(() => {
     setMounted(true)
     const savedThemeId = localStorage.getItem('cleargrade-theme')
     const savedCustomColor = localStorage.getItem('cleargrade-custom-color')
     const useCustom = localStorage.getItem('cleargrade-use-custom-color')
+    const savedDarkMode = (localStorage.getItem('cleargrade-dark-mode') as DarkMode) ?? 'auto'
+
+    setDarkModeState(savedDarkMode)
+    applyDark(savedDarkMode)
+
+    // Listen for system changes when auto
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleSystemChange = () => {
+      const current = (localStorage.getItem('cleargrade-dark-mode') as DarkMode) || 'auto'
+      if (current === 'auto') applyDark('auto')
+    }
+    mq.addEventListener('change', handleSystemChange)
     
     if (savedThemeId) {
       const savedTheme = getThemeById(savedThemeId)
@@ -56,6 +86,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setCustomPrimaryColorState(savedCustomColor)
       applyCustomColor(savedCustomColor)
     }
+
+    return () => mq.removeEventListener('change', handleSystemChange)
   }, [])
 
   const applyTheme = (theme: Theme) => {
@@ -129,9 +161,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (color) {
       applyCustomColor(color)
     } else {
-      // Re-apply current theme to reset colors
       applyTheme(theme)
     }
+  }
+
+  const setDarkMode = (mode: DarkMode) => {
+    setDarkModeState(mode)
+    applyDark(mode)
+    localStorage.setItem('cleargrade-dark-mode', mode)
   }
 
   if (!mounted) {
@@ -139,7 +176,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, themes, customPrimaryColor, setCustomPrimaryColor }}>
+    <ThemeContext.Provider value={{ theme, setTheme, themes, customPrimaryColor, setCustomPrimaryColor, darkMode, setDarkMode }}>
       {children}
     </ThemeContext.Provider>
   )
