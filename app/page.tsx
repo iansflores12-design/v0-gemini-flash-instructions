@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
+import { FooterEasterEgg } from '@/components/footer-easter-egg'
 
 export default async function LandingPage() {
   const supabase = await createClient()
@@ -125,22 +126,7 @@ export default async function LandingPage() {
       {/* Footer with tree logo + Kollektif font */}
       <footer className="px-4 py-10 border-t border-border">
         <div className="max-w-md mx-auto text-center">
-          <div 
-            className="flex items-center justify-center gap-3 text-lg font-bold text-muted-foreground tracking-wide"
-            style={{ fontFamily: "'Kollektif', 'Google Sans', sans-serif" }}
-          >
-            <img
-              src="/tree-os-light.svg"
-              alt="tree os"
-              className="w-8 h-8 dark:hidden"
-            />
-            <img
-              src="/tree-os-dark.svg"
-              alt="tree os"
-              className="w-8 h-8 hidden dark:block"
-            />
-            <span>by tree os</span>
-          </div>
+          <FooterEasterEgg />
         </div>
       </footer>
     </main>
