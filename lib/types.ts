@@ -2,9 +2,13 @@ export interface Profile {
   id: string
   username: string | null
   full_name: string | null
-  gemini_api_key: string | null
   theme: string | null
   updated_at: string
+  // Subscription fields
+  subscription_plan: 'free' | 'pro' | 'premium'
+  subscription_start_date: string | null
+  subscription_end_date: string | null
+  stripe_customer_id: string | null
 }
 
 export interface Subject {
@@ -56,4 +60,46 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+}
+
+// Subscription limits configuration
+export interface SubscriptionLimits {
+  chatMessagesPerDay: number
+  totalTasksAllowed: number
+  totalSubjectsAllowed: number
+  aiChatEnabled: boolean
+  adsFree: boolean
+}
+
+// Usage tracking
+export interface UserUsage {
+  userId: string
+  chatMessagesUsedToday: number
+  lastChatReset: string
+  totalTasksCreated: number
+  totalSubjectsCreated: number
+}
+
+export const SUBSCRIPTION_LIMITS: Record<string, SubscriptionLimits> = {
+  free: {
+    chatMessagesPerDay: 5,
+    totalTasksAllowed: 50,
+    totalSubjectsAllowed: 10,
+    aiChatEnabled: true,
+    adsFree: false
+  },
+  pro: {
+    chatMessagesPerDay: 50,
+    totalTasksAllowed: 500,
+    totalSubjectsAllowed: 100,
+    aiChatEnabled: true,
+    adsFree: true
+  },
+  premium: {
+    chatMessagesPerDay: 500,
+    totalTasksAllowed: 5000,
+    totalSubjectsAllowed: 1000,
+    aiChatEnabled: true,
+    adsFree: true
+  }
 }
