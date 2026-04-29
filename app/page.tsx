@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
+import { LogoImage } from '@/components/logo-image'
 
 export default async function LandingPage() {
   const supabase = await createClient()
@@ -25,12 +26,7 @@ export default async function LandingPage() {
         <div className="max-w-md mx-auto text-center">
           {/* Logo vector */}
           <div className="flex items-center justify-center mb-4 animate-scale-in">
-            <img
-              src="/cleargrade-vector.svg"
-              alt="ClearGrade logo"
-              className="w-20 h-20"
-              style={{ filter: 'var(--logo-filter)' }}
-            />
+            <LogoImage />
           </div>
 
           <h1 className="text-5xl font-bold text-foreground mb-3 text-balance animate-slide-up tracking-tight">
@@ -149,7 +145,7 @@ export default async function LandingPage() {
           </span>
         </div>
         <p className="text-center text-xs text-muted-foreground mt-3 opacity-60">
-          Organiza. Aprende. Destaca.
+          ClearGrade by tree os
         </p>
       </footer>
     </main>
