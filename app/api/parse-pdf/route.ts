@@ -1,46 +1,62 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const formData = await request.formData()
-    const file = formData.get('pdf') as File | null
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
 
     if (!file) {
-      return NextResponse.json({ error: 'No se recibió el archivo PDF' }, { status: 400 })
+      return NextResponse.json({ error: "No se subió ningún archivo" }, { status: 400 });
     }
 
-    // 1. Preparamos el envío hacia n8n
-    const n8nData = new FormData()
-    // 'data' debe coincidir con el "Input Data Field" en tu nodo de n8n
-    n8nData.append('data', file)
+    // Convertimos el archivo a un Buffer para enviarlo a la API
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
 
-    // 2. Tu URL de ngrok (Asegúrate de que sea la actual)
-    const N8N_WEBHOOK_URL = 'https://dimness-traps-retired.ngrok-free.dev/webhook-test/extract-tasks'
+    // Usamos un modelo de Document QA que acepta archivos directamente
+    // 'impira/layoutlm-document-qa' es excelente para formularios y tablas
+    const model = "impira/layoutlm-document-qa";
 
-    console.log('Enviando agenda a n8n...')
+    // Como queremos extraer múltiples datos (tareas, fechas, materiales),
+    // haremos una pregunta estructurada.
+    const prompt = "¿Cuáles son las tareas, fechas de entrega y materiales de esta agenda? Responde solo en formato JSON con la estructura {tasks: [{title, due_date, materials}]}";
 
-    const response = await fetch(N8N_WEBHOOK_URL, {
-      method: 'POST',
-      body: n8nData,
-      // No agregues headers manuales, deja que el navegador gestione el boundary
-    })
+    const response = await fetch(
+      `https://api-inference.huggingface.co/models/${model}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HF_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        body: JSON.stringify({
+          inputs: {
+            image: buffer.toString('base64'), // El modelo acepta base64
+            question: prompt
+          }
+        }),
+      }
+    );
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      return NextResponse.json({ error: `n8n error: ${errorText}` }, { status: response.status })
+    const result = await response.json();
+
+    // Lógica de limpieza: Hugging Face a veces devuelve un array o texto plano
+    // Intentamos extraer el JSON de la respuesta del modelo
+    if (result && result.answer) {
+      try {
+        // Si el modelo devuelve el JSON como string, lo parseamos
+        const cleanData = JSON.parse(result.answer);
+        return NextResponse.json(cleanData);
+      } catch (e) {
+        // Si no es un JSON válido, devolvemos la respuesta cruda para debug
+        return NextResponse.json({ raw: result.answer });
+      }
     }
 
-    // 3. Recibimos el JSON estructurado de n8n
-    const result = await response.json()
-
-    // IMPORTANTE: Imprimimos en tu terminal para que veas qué llega
-    console.log('Respuesta de n8n recibida correctamente')
-
-    // Enviamos el resultado (que contiene { "tasks": [...] }) al frontend
-    return NextResponse.json(result)
+    return NextResponse.json(result);
 
   } catch (error) {
-    console.error('Error en route.ts:', error)
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+    console.error("Error en el servidor:", error);
+    return NextResponse.json({ error: "Error al procesar la agenda" }, { status: 500 });
   }
 }
