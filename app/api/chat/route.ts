@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const HF_TOKEN = process.env.HF_TOKEN || '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'
-const HF_API_URL = 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3'
+const HF_API_URL = 'https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct'
 
 async function callHFAPI(prompt: string, retries = 3): Promise<string> {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -73,11 +73,10 @@ export async function POST(req: NextRequest) {
     }
 
     const conversationHistory = history?.map((msg: { role: string; content: string }) =>
-      `${msg.role === 'user' ? '[INST]' : '[/INST]'} ${msg.content}`
+      `<|start_header_id|>${msg.role === 'user' ? 'user' : 'assistant'}<|end_header_id|>\n${msg.content}<|eot_id|>`
     ).join('\n') || ''
 
-    const prompt = `[INST] Eres ClearGrade AI, un asistente de estudio amigable y util para estudiantes hispanohablantes. Ayudas con tareas, organizacion y dudas academicas. Responde siempre en espanol de forma clara y concisa. [/INST] Entendido. Estoy listo para ayudarte.
-${conversationHistory ? `${conversationHistory}\n` : ''}[INST] ${message} [/INST]`
+    const prompt = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nEres ClearGrade AI, un asistente de estudio amigable y util para estudiantes hispanohablantes. Ayudas con tareas, organizacion y dudas academicas. Responde siempre en espanol de forma clara y concisa.<|eot_id|>${conversationHistory}<|start_header_id|>user<|end_header_id|>\n\n${message}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n`
 
     const rawReply = await callHFAPI(prompt)
 

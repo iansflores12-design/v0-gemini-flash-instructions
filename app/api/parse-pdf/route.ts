@@ -10,7 +10,7 @@ try {
 }
 
 const HF_TOKEN = process.env.HF_TOKEN || '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'
-const HF_API_URL = 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3'
+const HF_API_URL = 'https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct'
 
 async function callHFAPI(prompt: string, maxTokens: number, retries = 3): Promise<string> {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -107,17 +107,14 @@ export async function POST(req: NextRequest) {
     // Truncate text to avoid exceeding model context window (~3000 chars for safety)
     const truncatedText = extractedText.substring(0, 2500) || 'No se pudo extraer texto'
 
-    const prompt = `[INST] Analiza el siguiente texto de una agenda escolar y extrae las tareas en formato JSON valido. Responde SOLO con el JSON, sin explicaciones.
-
-Texto: ${truncatedText}
-
-Responde SOLO con JSON valido:
-{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor","materials":[{"name":"Material","quantity":"1"}]}]} [/INST]`
+    const prompt = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nAnaliza el siguiente texto de una agenda escolar y extrae las tareas en formato JSON valido. Responde SOLO con el JSON, sin explicaciones.<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nTexto: ${truncatedText}\n\nResponde SOLO con JSON valido:\n{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor","materials":[{"name":"Material","quantity":"1"}]}]}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n`
 
     const rawParseResult = await callHFAPI(prompt, 2000)
     
     let responseText = rawParseResult
-      .replace(/<\/s>/g, '')
+      .replace(/<\|eot_id\|>/g, '')
+      .replace(/<\|start_header_id\|>.*?<\|end_header_id\|>/g, '')
+      .replace(/<\|begin_of_text\|>/g, '')
       .trim()
 
     const jsonMatch = responseText.match(/\{[\s\S]*"tasks"[\s\S]*\}/)
