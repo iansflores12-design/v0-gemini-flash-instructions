@@ -24,7 +24,16 @@ export default async function LandingPage() {
       {/* Hero Section */}
       <section className="px-4 pt-20 pb-16">
         <div className="max-w-md mx-auto text-center">
-          <h1 className="text-6xl font-bold text-foreground mb-3 text-balance animate-slide-up tracking-tight">
+          {/* Logo */}
+          <div className="flex justify-center mb-6 animate-scale-in">
+            <img
+              src="/cleargrade-icon.svg"
+              alt="ClearGrade"
+              className="w-24 h-24"
+            />
+          </div>
+
+          <h1 className="text-5xl font-bold text-foreground mb-3 text-balance animate-slide-up tracking-tight">
             ClearGrade
           </h1>
 
