@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
-import { LogoImage } from '@/components/logo-image'
 
 export default async function LandingPage() {
   const supabase = await createClient()
@@ -22,14 +21,9 @@ export default async function LandingPage() {
       </div>
 
       {/* Hero Section */}
-      <section className="px-4 pt-8 pb-16">
+      <section className="px-4 pt-20 pb-16">
         <div className="max-w-md mx-auto text-center">
-          {/* Logo vector */}
-          <div className="flex items-center justify-center mb-4 animate-scale-in">
-            <LogoImage />
-          </div>
-
-          <h1 className="text-5xl font-bold text-foreground mb-3 text-balance animate-slide-up tracking-tight">
+          <h1 className="text-6xl font-bold text-foreground mb-3 text-balance animate-slide-up tracking-tight">
             ClearGrade
           </h1>
 
@@ -132,15 +126,10 @@ export default async function LandingPage() {
       <footer className="px-4 py-10 border-t border-border">
         <div className="max-w-md mx-auto text-center">
           <div 
-            className="text-xl font-bold text-muted-foreground tracking-wide flex items-center justify-center gap-2"
+            className="text-lg font-bold text-muted-foreground tracking-wide"
             style={{ fontFamily: "'Kollektif', 'Google Sans', sans-serif" }}
           >
-            <img
-              src="/cleargrade-tree-logo.svg"
-              alt="tree os"
-              className="w-6 h-6"
-            />
-            <span>by tree os</span>
+            by tree os
           </div>
         </div>
       </footer>
