@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, ListTodo, BookOpen, User } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Home, ListTodo, BookOpen, User, MessageCircle } from 'lucide-react'
 
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Inicio' },
   { href: '/dashboard/tasks', icon: ListTodo, label: 'Tareas' },
   { href: '/dashboard/subjects', icon: BookOpen, label: 'Materias' },
+  { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat' },
   { href: '/dashboard/profile', icon: User, label: 'Perfil' },
 ]
 

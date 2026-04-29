@@ -55,7 +55,7 @@ Responde SOLO con JSON valido:
 } [/INST]`
 
     const parseResponse = await fetch(
-      'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1',
+      'https://api-inference.huggingface.co/models/google/flan-t5-large',
       {
         headers: {
           Authorization: `Bearer ${HF_TOKEN}`,
@@ -66,7 +66,6 @@ Responde SOLO con JSON valido:
           inputs: prompt,
           parameters: {
             max_new_tokens: 2000,
-            return_full_text: false,
             temperature: 0.3,
             do_sample: true,
           }
@@ -83,7 +82,18 @@ Responde SOLO con JSON valido:
       }, { status: 500 })
     }
 
-    const parseResult = await parseResponse.json()
+    const contentType = parseResponse.headers.get('content-type')
+    let parseResult
+    if (contentType?.includes('application/json')) {
+      parseResult = await parseResponse.json()
+    } else {
+      const text = await parseResponse.text()
+      console.error('Non-JSON response:', text)
+      return NextResponse.json({ 
+        error: 'Invalid API response',
+        tasks: [] 
+      }, { status: 500 })
+    }
     
     // Extract JSON from the response
     let responseText = ''
