@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { format, isToday, isTomorrow, isPast, parseISO, startOfWeek, endOfWeek, isWithinInterval, addWeeks, differenceInDays } from 'date-fns'
+import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, addWeeks, differenceInDays, isPast, isToday, isTomorrow } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Check, ChevronRight, ChevronDown, Package, Trash2, Loader2, Calendar, ExternalLink, Clock, Award } from 'lucide-react'
+import { Check, ChevronRight, Package, Trash2, Loader2, Calendar, ExternalLink, Clock, Star, X, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toggleTaskDone, deleteTask } from '@/lib/actions'
 import type { Task } from '@/lib/types'
@@ -13,108 +13,54 @@ interface TaskListProps {
   showViewAll?: boolean
 }
 
-interface WeekGroup {
+interface WeekData {
   weekNumber: number
   label: string
+  shortLabel: string
   startDate: Date
   endDate: Date
   tasks: Task[]
-  materials: { name: string; quantity: string | null; subjectName: string; subjectColor: string }[]
 }
 
 export function TaskList({ tasks, showViewAll }: TaskListProps) {
-  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set())
-  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set(['Esta semana', 'Atrasadas']))
+  const [selectedWeek, setSelectedWeek] = useState(0)
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
+  const [showCompleted, setShowCompleted] = useState(false)
 
-  // Group tasks by week
-  const weekGroups = useMemo(() => {
+  // Generate weeks data
+  const weeks = useMemo(() => {
     const today = new Date()
-    const groups: WeekGroup[] = []
+    const weeksList: WeekData[] = []
     
-    // Create week buckets for the next 12 weeks
     for (let i = 0; i < 12; i++) {
       const weekStart = startOfWeek(addWeeks(today, i), { weekStartsOn: 1 })
       const weekEnd = endOfWeek(addWeeks(today, i), { weekStartsOn: 1 })
       
       const weekTasks = tasks.filter(task => {
         const dueDate = parseISO(task.due_date)
-        return isWithinInterval(dueDate, { start: weekStart, end: weekEnd }) && 
-               !(isPast(dueDate) && !isToday(dueDate) && !task.is_done)
+        return isWithinInterval(dueDate, { start: weekStart, end: weekEnd })
       })
 
-      if (weekTasks.length > 0 || i === 0) {
-        // Collect materials for this week grouped by subject
-        const materials: { name: string; quantity: string | null; subjectName: string; subjectColor: string }[] = []
-        weekTasks.forEach(task => {
-          task.materials?.forEach(m => {
-            materials.push({
-              name: m.name,
-              quantity: m.quantity,
-              subjectName: task.subject?.name || 'Sin materia',
-              subjectColor: task.subject?.color_code || '#6750A4'
-            })
-          })
-        })
+      const startDay = format(weekStart, 'd', { locale: es })
+      const endDay = format(weekEnd, 'd', { locale: es })
+      const month = format(weekStart, 'MMM', { locale: es })
 
-        let label = ''
-        if (i === 0) label = 'Esta semana'
-        else if (i === 1) label = 'Proxima semana'
-        else label = `Semana ${i + 1} - ${format(weekStart, "d MMM", { locale: es })}`
-
-        groups.push({
-          weekNumber: i + 1,
-          label,
-          startDate: weekStart,
-          endDate: weekEnd,
-          tasks: weekTasks,
-          materials
-        })
-      }
-    }
-
-    // Add overdue tasks group
-    const overdueTasks = tasks.filter(task => {
-      const dueDate = parseISO(task.due_date)
-      return isPast(dueDate) && !isToday(dueDate) && !task.is_done
-    })
-
-    if (overdueTasks.length > 0) {
-      groups.unshift({
-        weekNumber: 0,
-        label: 'Atrasadas',
-        startDate: new Date(0),
-        endDate: new Date(0),
-        tasks: overdueTasks,
-        materials: []
+      weeksList.push({
+        weekNumber: i + 1,
+        label: i === 0 ? 'Esta semana' : i === 1 ? 'Proxima semana' : `Semana ${i + 1}`,
+        shortLabel: `S${i + 1}: ${startDay}-${endDay} ${month}`,
+        startDate: weekStart,
+        endDate: weekEnd,
+        tasks: weekTasks
       })
     }
-
-    return groups.filter(g => g.tasks.length > 0 || g.label === 'Esta semana')
+    
+    return weeksList.filter(w => w.tasks.length > 0 || w.weekNumber <= 4)
   }, [tasks])
 
-  const toggleWeek = (weekLabel: string) => {
-    setExpandedWeeks(prev => {
-      const next = new Set(prev)
-      if (next.has(weekLabel)) {
-        next.delete(weekLabel)
-      } else {
-        next.add(weekLabel)
-      }
-      return next
-    })
-  }
-
-  const toggleTask = (taskId: string) => {
-    setExpandedTasks(prev => {
-      const next = new Set(prev)
-      if (next.has(taskId)) {
-        next.delete(taskId)
-      } else {
-        next.add(taskId)
-      }
-      return next
-    })
-  }
+  const currentWeek = weeks[selectedWeek] || weeks[0]
+  const pendingTasks = currentWeek?.tasks.filter(t => !t.is_done) || []
+  const completedTasks = currentWeek?.tasks.filter(t => t.is_done) || []
 
   if (tasks.length === 0) {
     return (
@@ -132,115 +78,74 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
 
   return (
     <div className="space-y-4">
-      {weekGroups.map((week) => (
-        <div key={week.label} className="space-y-2">
-          {/* Week Header */}
-          <button
-            onClick={() => toggleWeek(week.label)}
-            className={cn(
-              'w-full flex items-center justify-between p-3 rounded-xl transition-colors',
-              week.label === 'Atrasadas' 
-                ? 'bg-destructive/10 hover:bg-destructive/15' 
-                : 'bg-secondary/50 hover:bg-secondary'
-            )}
-          >
-            <div className="flex items-center gap-2">
-              {expandedWeeks.has(week.label) ? (
-                <ChevronDown className="w-5 h-5 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              )}
-              <div className="text-left">
-                <span className={cn(
-                  'font-semibold',
-                  week.label === 'Atrasadas' ? 'text-destructive' : 'text-foreground'
-                )}>
-                  {week.label}
-                </span>
-                <span className="text-sm text-muted-foreground ml-2">
-                  {week.tasks.filter(t => !t.is_done).length} pendientes
-                </span>
-              </div>
-            </div>
-            {week.label === 'Atrasadas' && (
-              <span className="px-2 py-1 rounded-full bg-destructive text-destructive-foreground text-xs font-medium">
-                Urgente
-              </span>
-            )}
-          </button>
-
-          {expandedWeeks.has(week.label) && (
-            <div className="space-y-3 pl-2">
-              {/* Materials for the week */}
-              {week.materials.length > 0 && (
-                <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Package className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-semibold text-foreground">
-                      Materiales de la {week.label.toLowerCase()}
-                    </span>
-                  </div>
-                  {/* Group materials by subject */}
-                  {Object.entries(
-                    week.materials.reduce((acc, m) => {
-                      if (!acc[m.subjectName]) acc[m.subjectName] = { color: m.subjectColor, items: [] }
-                      acc[m.subjectName].items.push(m)
-                      return acc
-                    }, {} as Record<string, { color: string; items: typeof week.materials }>)
-                  ).map(([subjectName, { color, items }]) => (
-                    <div key={subjectName} className="mb-2 last:mb-0">
-                      <p className="text-xs font-medium mb-1.5" style={{ color }}>
-                        {subjectName}:
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {items.map((m, i) => (
-                          <span 
-                            key={i}
-                            className="text-xs px-2.5 py-1 rounded-lg border"
-                            style={{ 
-                              borderColor: color,
-                              backgroundColor: `${color}10`
-                            }}
-                          >
-                            {m.quantity ? `${m.quantity} ` : ''}{m.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Pending Tasks */}
-              {week.tasks.filter(t => !t.is_done).map((task) => (
-                <TaskCard 
-                  key={task.id} 
-                  task={task} 
-                  weekNumber={week.weekNumber}
-                  isExpanded={expandedTasks.has(task.id)}
-                  onToggleExpand={() => toggleTask(task.id)}
-                />
-              ))}
-
-              {/* Done Tasks */}
-              {week.tasks.filter(t => t.is_done).length > 0 && (
-                <div className="pt-2 border-t border-border">
-                  <p className="text-xs text-muted-foreground mb-2 pl-2">Completadas</p>
-                  {week.tasks.filter(t => t.is_done).map((task) => (
-                    <TaskCard 
-                      key={task.id} 
-                      task={task}
-                      weekNumber={week.weekNumber}
-                      isExpanded={expandedTasks.has(task.id)}
-                      onToggleExpand={() => toggleTask(task.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+      {/* Week Tabs - Horizontal scroll */}
+      <div className="overflow-x-auto -mx-4 px-4 pb-2">
+        <div className="flex gap-2 min-w-max">
+          {weeks.map((week, idx) => {
+            const hasTasks = week.tasks.filter(t => !t.is_done).length > 0
+            return (
+              <button
+                key={week.weekNumber}
+                onClick={() => setSelectedWeek(idx)}
+                className={cn(
+                  'px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all',
+                  selectedWeek === idx
+                    ? 'bg-primary text-primary-foreground'
+                    : hasTasks
+                      ? 'bg-secondary text-foreground hover:bg-secondary/80'
+                      : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                )}
+              >
+                {week.shortLabel}
+              </button>
+            )
+          })}
         </div>
-      ))}
+      </div>
+
+      {/* Tasks List */}
+      <div className="space-y-3">
+        {pendingTasks.length === 0 && completedTasks.length === 0 ? (
+          <div className="p-6 text-center rounded-2xl bg-secondary/30">
+            <p className="text-muted-foreground">No hay tareas para {currentWeek?.label.toLowerCase()}</p>
+          </div>
+        ) : (
+          <>
+            {pendingTasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                weekNumber={currentWeek?.weekNumber || 1}
+                isExpanded={expandedTaskId === task.id}
+                onToggleExpand={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
+              />
+            ))}
+
+            {/* Completed Tasks Toggle */}
+            {completedTasks.length > 0 && (
+              <button
+                onClick={() => setShowCompleted(!showCompleted)}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-secondary/30 text-muted-foreground hover:bg-secondary/50 transition-colors"
+              >
+                <span className="text-sm">
+                  {completedTasks.length} tarea{completedTasks.length > 1 ? 's' : ''} completada{completedTasks.length > 1 ? 's' : ''}
+                </span>
+                <ChevronRight className={cn('w-4 h-4 transition-transform', showCompleted && 'rotate-90')} />
+              </button>
+            )}
+
+            {showCompleted && completedTasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                weekNumber={currentWeek?.weekNumber || 1}
+                isExpanded={expandedTaskId === task.id}
+                onToggleExpand={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
+              />
+            ))}
+          </>
+        )}
+      </div>
       
       {showViewAll && tasks.length > 0 && (
         <a 
@@ -272,20 +177,16 @@ function TaskCard({
   const dueDate = parseISO(task.due_date)
   const isOverdue = isPast(dueDate) && !isToday(dueDate) && !task.is_done
   const daysUntilDue = differenceInDays(dueDate, new Date())
+  const subjectColor = task.subject?.color_code || '#6750A4'
 
   const getDateLabel = () => {
     if (isToday(dueDate)) return 'Hoy'
     if (isTomorrow(dueDate)) return 'Manana'
-    return format(dueDate, "EEEE d 'de' MMMM", { locale: es })
+    return format(dueDate, "EEE d MMM", { locale: es })
   }
 
-  const getShortDateLabel = () => {
-    if (isToday(dueDate)) return 'Hoy'
-    if (isTomorrow(dueDate)) return 'Manana'
-    return format(dueDate, 'd MMM', { locale: es })
-  }
-
-  const handleToggle = async () => {
+  const handleToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation()
     setLoading(true)
     try {
       await toggleTaskDone(task.id, !task.is_done)
@@ -294,7 +195,8 @@ function TaskCard({
     }
   }
 
-  const handleDelete = async () => {
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
     setDeleting(true)
     try {
       await deleteTask(task.id)
@@ -303,7 +205,8 @@ function TaskCard({
     }
   }
 
-  const addToGoogleCalendar = () => {
+  const addToGoogleCalendar = (e: React.MouseEvent) => {
+    e.stopPropagation()
     const title = encodeURIComponent(task.title)
     const details = encodeURIComponent(task.description || '')
     const date = task.due_date.replace(/-/g, '')
@@ -311,219 +214,225 @@ function TaskCard({
     window.open(url, '_blank')
   }
 
-  const subjectColor = task.subject?.color_code || '#6750A4'
+  // Task type badge (simplified detection)
+  const taskType = task.title.toLowerCase().includes('examen') || task.title.toLowerCase().includes('parcial') 
+    ? 'Examen' 
+    : task.title.toLowerCase().includes('proyecto')
+      ? 'Proyecto'
+      : 'Tarea'
 
   return (
     <div 
       className={cn(
-        'rounded-2xl bg-card border transition-all overflow-hidden',
-        task.is_done 
-          ? 'border-border opacity-60' 
-          : isOverdue 
-            ? 'border-destructive/50 bg-destructive/5'
-            : 'border-border'
+        'rounded-2xl bg-card border-l-4 overflow-hidden transition-all',
+        task.is_done ? 'opacity-60 border-border' : isOverdue ? 'border-destructive' : 'border-transparent'
       )}
-      style={{ borderLeftWidth: '4px', borderLeftColor: subjectColor }}
+      style={{ borderLeftColor: task.is_done ? undefined : subjectColor }}
     >
-      {/* Main row - always visible */}
+      {/* Collapsed View - Card */}
       <div 
-        className="p-4 cursor-pointer"
+        className="p-4 cursor-pointer hover:bg-secondary/30 transition-colors"
         onClick={onToggleExpand}
       >
         <div className="flex items-start gap-3">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              handleToggle()
-            }}
-            disabled={loading}
-            className={cn(
-              'flex-shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all mt-0.5',
-              task.is_done
-                ? 'bg-primary border-primary'
-                : 'border-outline hover:border-primary'
-            )}
-          >
-            {loading ? (
-              <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
-            ) : task.is_done ? (
-              <Check className="w-3.5 h-3.5 text-primary-foreground" />
-            ) : null}
-          </button>
-
           <div className="flex-1 min-w-0">
+            {/* Badges */}
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span 
+                className="text-xs px-2 py-0.5 rounded-full font-medium border"
+                style={{ 
+                  color: subjectColor,
+                  borderColor: subjectColor,
+                  backgroundColor: `${subjectColor}15`
+                }}
+              >
+                {task.subject?.name || 'Sin materia'}
+              </span>
+              <span className={cn(
+                'text-xs px-2 py-0.5 rounded-full font-medium',
+                taskType === 'Examen' ? 'bg-amber-500/20 text-amber-600' :
+                taskType === 'Proyecto' ? 'bg-blue-500/20 text-blue-600' :
+                'bg-secondary text-muted-foreground'
+              )}>
+                {taskType}
+              </span>
+            </div>
+
+            {/* Title */}
             <p className={cn(
-              'font-medium text-foreground',
+              'font-semibold text-foreground',
               task.is_done && 'line-through text-muted-foreground'
             )}>
               {task.title}
             </p>
             
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              {task.subject && (
-                <span 
-                  className="text-xs px-2 py-0.5 rounded-full font-medium"
-                  style={{ 
-                    backgroundColor: `${subjectColor}20`,
-                    color: subjectColor 
-                  }}
-                >
-                  {task.subject.name}
-                </span>
-              )}
-              <span className={cn(
-                'text-xs flex items-center gap-1',
-                isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'
-              )}>
-                <Clock className="w-3 h-3" />
-                {getShortDateLabel()}
+            {/* Meta info */}
+            <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                S{weekNumber}: {getDateLabel()}
               </span>
-              {task.materials && task.materials.length > 0 && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Package className="w-3 h-3" />
-                  {task.materials.length}
+              {task.value && (
+                <span className="flex items-center gap-1 text-primary font-medium">
+                  {task.value}
                 </span>
               )}
             </div>
           </div>
 
-          <ChevronDown className={cn(
-            'w-5 h-5 text-muted-foreground transition-transform flex-shrink-0',
-            isExpanded && 'rotate-180'
-          )} />
+          {/* Checkbox */}
+          <button
+            onClick={handleToggle}
+            disabled={loading}
+            className={cn(
+              'flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all',
+              task.is_done
+                ? 'bg-primary border-primary'
+                : 'border-border hover:border-primary'
+            )}
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            ) : task.is_done ? (
+              <Check className="w-4 h-4 text-primary-foreground" />
+            ) : null}
+          </button>
         </div>
       </div>
 
-      {/* Expanded content */}
+      {/* Expanded View - Full Detail Sheet */}
       {isExpanded && (
-        <div className="px-4 pb-4 pt-0 border-t border-border/50 space-y-4">
-          {/* Task Details Grid */}
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            {/* Week */}
-            <div className="p-3 rounded-xl bg-secondary/50">
-              <p className="text-xs text-muted-foreground mb-1">Semana</p>
-              <p className="font-semibold text-foreground">
-                {weekNumber === 0 ? 'Atrasada' : `Semana ${weekNumber}`}
-              </p>
+        <div className="border-t border-border bg-background">
+          {/* Header with subject */}
+          <div className="p-4 border-b border-border flex items-center gap-3">
+            <div 
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: `${subjectColor}20` }}
+            >
+              <span style={{ color: subjectColor }} className="font-bold text-sm">
+                {task.subject?.name?.charAt(0) || 'T'}
+              </span>
             </div>
-            
-            {/* Due Date */}
-            <div className="p-3 rounded-xl bg-secondary/50">
-              <p className="text-xs text-muted-foreground mb-1">Fecha de entrega</p>
-              <p className={cn(
-                'font-semibold',
-                isOverdue ? 'text-destructive' : 'text-foreground'
-              )}>
-                {getDateLabel()}
-              </p>
-            </div>
-
-            {/* Days remaining */}
-            <div className="p-3 rounded-xl bg-secondary/50">
-              <p className="text-xs text-muted-foreground mb-1">Tiempo restante</p>
-              <p className={cn(
-                'font-semibold',
-                daysUntilDue < 0 ? 'text-destructive' : daysUntilDue <= 2 ? 'text-warning' : 'text-foreground'
-              )}>
-                {daysUntilDue < 0 
-                  ? `${Math.abs(daysUntilDue)} dias atrasada`
-                  : daysUntilDue === 0 
-                    ? 'Hoy' 
-                    : `${daysUntilDue} dias`
-                }
-              </p>
-            </div>
-
-            {/* Subject */}
-            <div className="p-3 rounded-xl bg-secondary/50">
-              <p className="text-xs text-muted-foreground mb-1">Materia</p>
-              <p className="font-semibold" style={{ color: subjectColor }}>
+            <div className="flex-1">
+              <p className="font-medium" style={{ color: subjectColor }}>
                 {task.subject?.name || 'Sin materia'}
               </p>
+              <p className="text-xs text-muted-foreground">{taskType}</p>
             </div>
+            <button
+              onClick={onToggleExpand}
+              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+            >
+              <X className="w-5 h-5 text-muted-foreground" />
+            </button>
+          </div>
+
+          {/* Title */}
+          <div className="p-4">
+            <h3 className="text-lg font-bold text-foreground">{task.title}</h3>
+          </div>
+
+          {/* Date & Value */}
+          <div className="px-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Fecha limite</p>
+                <p className={cn(
+                  'font-semibold',
+                  isOverdue ? 'text-destructive' : 'text-foreground'
+                )}>
+                  {format(dueDate, "EEEE d 'de' MMMM", { locale: es })}
+                </p>
+              </div>
+            </div>
+
+            {task.value && (
+              <div className="flex items-center gap-3">
+                <Star className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Valor</p>
+                  <p className="font-semibold text-primary">{task.value}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Description */}
           {task.description && (
-            <div className="p-3 rounded-xl bg-secondary/30">
-              <p className="text-xs text-muted-foreground mb-1">Descripcion</p>
-              <p className="text-sm text-foreground whitespace-pre-wrap">
-                {task.description}
-              </p>
+            <div className="px-4 pt-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Descripcion</p>
+              <div className="p-3 rounded-xl bg-secondary/50">
+                <p className="text-sm text-foreground whitespace-pre-wrap">{task.description}</p>
+              </div>
             </div>
           )}
 
           {/* Materials */}
           {task.materials && task.materials.length > 0 && (
-            <div className="p-3 rounded-xl bg-primary/5 border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Package className="w-4 h-4 text-primary" />
-                <p className="text-xs font-semibold text-primary">Materiales necesarios</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
+            <div className="px-4 pt-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Materiales necesarios</p>
+              <div className="space-y-2">
                 {task.materials.map((m, i) => (
-                  <span 
+                  <div 
                     key={i}
-                    className="text-sm px-3 py-1.5 rounded-lg bg-card border border-border text-foreground"
+                    className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50"
                   >
-                    {m.quantity ? <span className="font-medium">{m.quantity}</span> : null}
-                    {m.quantity ? ' ' : ''}{m.name}
-                  </span>
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: subjectColor }} />
+                    <span className="text-sm text-foreground">
+                      {m.quantity ? `${m.quantity} - ` : ''}{m.name}
+                    </span>
+                  </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Action buttons */}
-          <div className="flex gap-2">
+          {/* Action Buttons */}
+          <div className="p-4 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={addToGoogleCalendar}
+                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
+              >
+                <Calendar className="w-4 h-4" />
+                Google Calendar
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  // Copy to clipboard functionality
+                  const text = `${task.title}\nFecha: ${format(dueDate, "d MMM yyyy")}\n${task.description || ''}`
+                  navigator.clipboard.writeText(text)
+                }}
+                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-green-500/10 text-green-600 font-medium hover:bg-green-500/20 transition-colors"
+              >
+                <Check className="w-4 h-4" />
+                Copiar p/ Tasks
+              </button>
+            </div>
+
             <button
-              onClick={(e) => {
-                e.stopPropagation()
-                handleToggle()
-              }}
+              onClick={handleToggle}
               disabled={loading}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium transition-colors',
+                'w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-colors',
                 task.is_done 
-                  ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  ? 'bg-secondary text-foreground hover:bg-secondary/80'
+                  : 'bg-card border border-border text-foreground hover:bg-secondary'
               )}
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  <Check className="w-4 h-4" />
-                  {task.is_done ? 'Desmarcar' : 'Completar'}
+                  {task.is_done ? (
+                    <X className="w-4 h-4" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full border-2 border-current" />
+                  )}
+                  {task.is_done ? 'Desmarcar como hecha' : 'Marcar como hecha'}
                 </>
-              )}
-            </button>
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                addToGoogleCalendar()
-              }}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-sm font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
-              title="Agregar a Google Calendar"
-            >
-              <Calendar className="w-4 h-4" />
-              <ExternalLink className="w-3 h-3" />
-            </button>
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                handleDelete()
-              }}
-              disabled={deleting}
-              className="p-2.5 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-              title="Eliminar tarea"
-            >
-              {deleting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
               )}
             </button>
           </div>

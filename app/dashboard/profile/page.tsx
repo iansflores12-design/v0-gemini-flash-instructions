@@ -206,15 +206,21 @@ export default function ProfilePage() {
                   </button>
                 </div>
                 {useCustomColor && (
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={customColor}
-                      onChange={(e) => handleCustomColorChange(e.target.value)}
-                      className="w-12 h-10 rounded-lg border-0 cursor-pointer"
-                    />
+                  <div className="flex items-center gap-3 mt-3">
+                    <label className="relative w-14 h-12 rounded-xl overflow-hidden cursor-pointer border-2 border-border hover:border-primary transition-colors">
+                      <input
+                        type="color"
+                        value={customColor}
+                        onChange={(e) => handleCustomColorChange(e.target.value)}
+                        className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
+                      />
+                      <div 
+                        className="absolute inset-0"
+                        style={{ backgroundColor: customColor }}
+                      />
+                    </label>
                     <div 
-                      className="flex-1 h-10 rounded-xl flex items-center justify-center text-sm font-medium text-white"
+                      className="flex-1 h-12 rounded-xl flex items-center justify-center text-sm font-bold text-white shadow-lg"
                       style={{ backgroundColor: customColor }}
                     >
                       {customColor.toUpperCase()}

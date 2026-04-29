@@ -82,7 +82,7 @@ Asigna un color unico a cada materia (usa colores vibrantes como #6750A4, #FF6B6
 Si no hay informacion clara, devuelve un array vacio.`
 
     const parseResponse = await fetch(
-      'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
+      'https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta',
       {
         headers: {
           Authorization: `Bearer ${HF_TOKEN}`,

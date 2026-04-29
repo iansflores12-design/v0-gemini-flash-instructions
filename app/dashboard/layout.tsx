@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { BottomNav } from '@/components/bottom-nav'
-import { AIChat } from '@/components/ai-chat'
+import { DashboardClient } from '@/components/dashboard-client'
 
 export default async function DashboardLayout({
   children,
@@ -16,10 +16,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <DashboardClient>
       {children}
-      <AIChat />
-      <BottomNav />
-    </div>
+    </DashboardClient>
   )
 }
