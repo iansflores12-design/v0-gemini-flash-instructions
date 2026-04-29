@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const HF_TOKEN = process.env.HF_TOKEN || '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'
-const HF_API_URL = 'https://api-inference.huggingface.co/models/microsoft/Phi-3-mini-4k-instruct'
+const HF_API_URL = 'https://api-inference.huggingface.co/models/HuggingFaceTB/SmolLM2-1.7B-Instruct'
 
 async function callHFAPI(prompt: string, retries = 3): Promise<string> {
   for (let attempt = 1; attempt <= retries; attempt++) {
