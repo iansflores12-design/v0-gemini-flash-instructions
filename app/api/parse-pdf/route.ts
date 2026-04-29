@@ -67,7 +67,7 @@ Responde SOLO con JSON valido:
 } [/INST]`
 
     const parseResponse = await fetch(
-      'https://api-inference.huggingface.co/models/google/flan-t5-large',
+      'https://api-inference.huggingface.co/microsoft/Phi-3-mini-4k-instruct',
       {
         headers: {
           Authorization: `Bearer ${HF_TOKEN}`,
