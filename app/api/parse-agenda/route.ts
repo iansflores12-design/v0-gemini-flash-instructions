@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
     
     const prompt = `Analiza el siguiente texto de una agenda escolar o lista de tareas y extrae la información estructurada.
 
