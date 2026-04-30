@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
+import { Settings } from 'lucide-react'
 
 interface DashboardHeaderProps {
   userName: string
@@ -28,6 +30,13 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
           <h1 className="text-2xl font-bold text-foreground">{firstName}</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/settings"
+            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+            title="Ajustes"
+          >
+            <Settings className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
+          </Link>
           <DarkModeToggle />
           <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
             {initial}

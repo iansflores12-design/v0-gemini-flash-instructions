@@ -196,7 +196,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setCustomPrimaryColorState(color)
     if (color) {
       applyCustomColor(color)
+      localStorage.setItem('cleargrade-use-custom-color', 'true')
     } else {
+      localStorage.removeItem('cleargrade-use-custom-color')
       applyTheme(theme)
     }
   }
