@@ -14,7 +14,7 @@ try {
 }
 
 async function callGeminiAPI(prompt: string): Promise<string> {
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -69,11 +69,11 @@ export async function POST(req: NextRequest) {
 
     let extractedText = ''
 
-  if (isDOCX) {
-  const arrayBuffer = await file.arrayBuffer()
-  const buffer = Buffer.from(arrayBuffer)
-  const result = await mammoth.extractRawText({ buffer })
-  extractedText = result.value
+    if (isDOCX) {
+      const arrayBuffer = await file.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
+      const result = await mammoth.extractRawText({ buffer })
+      extractedText = result.value
     } else if (pdf) {
       const arrayBuffer = await file.arrayBuffer()
       const data = await pdf(Buffer.from(arrayBuffer))
@@ -98,22 +98,29 @@ Responde SOLO con JSON valido en este formato:
 Asegúrate de que el JSON sea valido.`
 
     const rawParseResult = await callGeminiAPI(prompt)
-    
-    let responseText = rawParseResult.trim()
 
+    let responseText = rawParseResult.trim()
+    console.log('[v0] Gemini raw response:', responseText.substring(0, 500))
+
+    // Remove markdown code blocks if present
+    responseText = responseText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
+
+    // Try to extract JSON object
     const jsonMatch = responseText.match(/\{[\s\S]*"tasks"[\s\S]*\}/)
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[0])
-        return NextResponse.json(parsed)
-      } catch {
-        console.error('[v0] JSON parse error')
+        if (parsed.tasks && Array.isArray(parsed.tasks)) {
+          return NextResponse.json(parsed)
+        }
+      } catch (e) {
+        console.error('[v0] JSON parse error:', e)
       }
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       tasks: [],
-      raw: responseText 
+      raw: responseText
     })
 
   } catch (error) {
