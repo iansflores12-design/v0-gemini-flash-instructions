@@ -161,7 +161,9 @@ export async function createTaskWithMaterials(
   title: string,
   dueDate: string,
   subjectName: string | undefined,
-  materials: { name: string; quantity?: string }[]
+  materials: { name: string; quantity?: string }[],
+  description?: string,
+  value?: string
 ): Promise<Task | { error: string; limitExceeded?: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -234,14 +236,16 @@ export async function createTaskWithMaterials(
     }
   }
   
-  // Create task
+  // Create task with description and value
   const { data: task, error: taskError } = await supabase
     .from('tasks')
     .insert({
       title,
       due_date: dueDate,
       subject_id: subjectId,
-      user_id: user.id
+      user_id: user.id,
+      description: description || null,
+      value: value || null
     })
     .select()
     .single()

@@ -99,7 +99,9 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
           task.title,
           task.due_date,
           task.subject || undefined,
-          task.materials || []
+          task.materials || [],
+          task.description || undefined,
+          task.value || undefined
         )
         
         // Check if result has error

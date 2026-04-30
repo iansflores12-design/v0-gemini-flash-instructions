@@ -31,6 +31,8 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin backticks) con este 
       "title": "Nombre de la tarea",
       "subject": "Nombre de la materia si se menciona o null",
       "due_date": "YYYY-MM-DD (usa la fecha actual ${new Date().toISOString().split('T')[0]} como referencia para interpretar fechas relativas como 'mañana', 'lunes', etc.)",
+      "description": "Descripción detallada de la tarea si existe o null",
+      "value": "Valor o puntuación de la tarea (ej: '10%', '20 puntos', '5') o null si no se especifica",
       "materials": [
         { "name": "nombre del material", "quantity": "cantidad si se especifica o null" }
       ]
@@ -43,6 +45,8 @@ Reglas:
 - Si no hay fecha específica, usa una fecha razonable cercana
 - Los materiales incluyen libros, cuadernos, hojas, colores, cartulinas, etc.
 - Si no hay materiales mencionados, deja el array vacío
+- La descripción debe incluir detalles, instrucciones y criterios de la tarea
+- El value es importante para calificaciones: busca porcentajes, puntos, puntajes, puntuaciones, peso, etc.
 - Responde SOLO con el JSON, sin explicaciones adicionales`
 
     const result = await model.generateContent(prompt)
