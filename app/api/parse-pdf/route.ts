@@ -43,16 +43,18 @@ export async function POST(req: NextRequest) {
 
         const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
 
-        const prompt = `Eres un asistente que extrae tareas de agendas escolares. Analiza este PDF y extrae TODAS las tareas mencionadas.
+        const prompt = `Eres un asistente que extrae tareas de agendas escolares. Analiza este PDF de una agenda escolar y extrae TODAS las tareas mencionadas.
 
 INSTRUCCIONES:
-- Extrae cada tarea del documento
-- Fecha en formato YYYY-MM-DD
-- Asigna colores a materias (#FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD, #FF8C94)
+- Extrae cada tarea mencionada en el documento
+- Si no hay tareas claras, devuelve un array vacio
+- La fecha debe estar en formato YYYY-MM-DD (ej: 2026-05-15)
+- Si no hay fecha, usa la fecha actual o proximos 7 dias
+- Asigna un color a cada materia (elige colores como #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD, #FF8C94)
 - Los materiales son opcionales
 
-RESPONDE SOLO CON JSON VALIDO (sin markdown):
-{"tasks":[{"title":"Tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Desc","value":"Puntos","materials":[{"name":"Mat","quantity":"Qty"}]}]}`
+RESPONDE SOLO CON EL SIGUIENTE JSON VALIDO (sin explicaciones, sin markdown):
+{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor o puntos","materials":[{"name":"Material","quantity":"Cantidad"}]}]}`
 
         const result = await model.generateContent([
           prompt,
@@ -110,16 +112,24 @@ async function processTextWithGemini(extractedText: string) {
   const truncatedText = extractedText.substring(0, 8000) || 'No se pudo extraer texto'
   console.log('[v0] Text length:', truncatedText.length)
 
-  const prompt = `Analiza este texto de agenda escolar y extrae TODAS las tareas.
+  const prompt = `Eres un asistente que extrae tareas de agendas escolares. Analiza el siguiente texto y extrae TODAS las tareas escolares mencionadas.
 
-TEXTO:
+TEXTO DE LA AGENDA:
 ${truncatedText}
 
-RESPONDE SOLO CON JSON VALIDO:
-{"tasks":[{"title":"Tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Desc","value":"Puntos","materials":[{"name":"Mat","quantity":"Qty"}]}]}`
+INSTRUCCIONES:
+- Extrae cada tarea mencionada en el texto
+- Si no hay tareas claras, devuelve un array vacio
+- La fecha debe estar en formato YYYY-MM-DD (ej: 2026-05-15)
+- Si no hay fecha, usa la fecha actual o proximos 7 dias
+- Asigna un color a cada materia (elige colores como #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD, #FF8C94)
+- Los materiales son opcionales
+
+RESPONDE SOLO CON EL SIGUIENTE JSON VALIDO (sin explicaciones, sin markdown):
+{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor o puntos","materials":[{"name":"Material","quantity":"Cantidad"}]}]}`
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
