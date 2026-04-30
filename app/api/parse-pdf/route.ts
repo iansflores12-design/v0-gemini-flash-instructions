@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import mammoth from 'mammoth'
 import { getAdminConfig } from '@/lib/admin-config'
-import { createClient } from '@/lib/supabase/server'
-import { SUBSCRIPTION_LIMITS } from '@/lib/types'
+
+// Global Gemini API Key - used for all users
+const GEMINI_API_KEY = 'AIzaSyBthuQfIIQ2SQJtar_uslJiGoWqAr7UeCw'
 
 // Dynamically import pdf-parse to avoid test file issues
 let pdf: any
@@ -12,7 +13,7 @@ try {
   pdf = null
 }
 
-async function callGeminiAPI(prompt: string, apiKey: string): Promise<string> {
+async function callGeminiAPI(prompt: string): Promise<string> {
   const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
     method: 'POST',
     headers: {
@@ -83,30 +84,8 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    // Get admin config (with fallback for debug mode)
-    const config = await getAdminConfig()
-    const apiKey = config?.geminiApiKey || process.env.GEMINI_API_KEY || ''
-
     // Truncate text to avoid exceeding model context
     const truncatedText = extractedText.substring(0, 3000) || 'No se pudo extraer texto'
-
-    if (!apiKey) {
-      console.warn('[v0] No Gemini API key, returning demo tasks')
-      return NextResponse.json({
-        tasks: [
-          {
-            title: 'Demo: Configura Gemini en /activate',
-            subject: 'Configuración',
-            subject_color: '#6750A4',
-            due_date: new Date().toISOString().split('T')[0],
-            description: 'Agrega tu API key de Google Gemini para usar el parseador automático',
-            value: 'Demo',
-            materials: []
-          }
-        ],
-        demo: true
-      })
-    }
 
     const prompt = `Analiza el siguiente texto de una agenda escolar y extrae las tareas en formato JSON valido. Responde SOLO con el JSON, sin explicaciones.
 
@@ -117,7 +96,7 @@ Responde SOLO con JSON valido en este formato:
 
 Asegúrate de que el JSON sea valido.`
 
-    const rawParseResult = await callGeminiAPI(prompt, apiKey)
+    const rawParseResult = await callGeminiAPI(prompt)
     
     let responseText = rawParseResult.trim()
 
