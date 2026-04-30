@@ -49,12 +49,12 @@ INSTRUCCIONES:
 - Extrae cada tarea mencionada en el documento
 - Si no hay tareas claras, devuelve un array vacio
 - La fecha debe estar en formato YYYY-MM-DD (ej: 2026-05-15)
-- Si no hay fecha, usa la fecha actual o proximos 7 dias
-- Asigna un color a cada materia (elige colores como #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD, #FF8C94)
+- Si no hay fecha, usa una fecha dentro de los proximos 7 dias
 - Los materiales son opcionales
+- Escapa correctamente comillas dobles en strings
 
-RESPONDE SOLO CON EL SIGUIENTE JSON VALIDO (sin explicaciones, sin markdown):
-{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor o puntos","materials":[{"name":"Material","quantity":"Cantidad"}]}]}`
+RESPONDE SOLO CON UN JSON VALIDO (sin explicaciones, sin markdown, sin backticks):
+{"tasks":[{"title":"Nombre de la tarea","subject":"Materia o null","due_date":"YYYY-MM-DD","description":"Descripcion o null","value":"Valor en puntos/porcentaje o null","materials":[]}]}`
 
         const result = await model.generateContent([
           prompt,
@@ -121,12 +121,12 @@ INSTRUCCIONES:
 - Extrae cada tarea mencionada en el texto
 - Si no hay tareas claras, devuelve un array vacio
 - La fecha debe estar en formato YYYY-MM-DD (ej: 2026-05-15)
-- Si no hay fecha, usa la fecha actual o proximos 7 dias
-- Asigna un color a cada materia (elige colores como #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD, #FF8C94)
+- Si no hay fecha, usa una fecha dentro de los proximos 7 dias
 - Los materiales son opcionales
+- Escapa correctamente comillas dobles en strings con backslash
 
-RESPONDE SOLO CON EL SIGUIENTE JSON VALIDO (sin explicaciones, sin markdown):
-{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor o puntos","materials":[{"name":"Material","quantity":"Cantidad"}]}]}`
+RESPONDE SOLO CON UN JSON VALIDO (sin explicaciones, sin markdown, sin backticks):
+{"tasks":[{"title":"Nombre de la tarea","subject":"Materia o null","due_date":"YYYY-MM-DD","description":"Descripcion o null","value":"Valor en puntos/porcentaje o null","materials":[]}]}`
 
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
@@ -140,19 +140,51 @@ RESPONDE SOLO CON EL SIGUIENTE JSON VALIDO (sin explicaciones, sin markdown):
 
     const data = await response.json()
     const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    
+    console.log('[v0] Raw API response:', responseText.substring(0, 200))
 
+    // Clean up response
     let cleanedText = responseText.trim()
-    cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
+    
+    // Remove markdown code blocks if present
+    cleanedText = cleanedText.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim()
+    
+    // Remove any leading/trailing whitespace
+    cleanedText = cleanedText.trim()
 
-    const jsonMatch = cleanedText.match(/\{[\s\S]*"tasks"[\s\S]*\}/)
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0])
-      if (parsed.tasks && Array.isArray(parsed.tasks)) {
-        return NextResponse.json(parsed)
+    // Extract JSON object using a more robust method
+    const jsonStart = cleanedText.indexOf('{')
+    const jsonEnd = cleanedText.lastIndexOf('}')
+    
+    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+      const jsonStr = cleanedText.substring(jsonStart, jsonEnd + 1)
+      
+      try {
+        // Validate JSON with better error handling
+        const parsed = JSON.parse(jsonStr)
+        
+        if (parsed.tasks && Array.isArray(parsed.tasks)) {
+          // Ensure all required fields exist
+          const validTasks = parsed.tasks.map((task: any) => ({
+            title: task.title || 'Sin título',
+            subject: task.subject || null,
+            due_date: task.due_date || new Date().toISOString().split('T')[0],
+            description: task.description || null,
+            value: task.value || null,
+            materials: Array.isArray(task.materials) ? task.materials : []
+          }))
+          
+          console.log('[v0] Successfully parsed tasks:', validTasks.length)
+          return NextResponse.json({ tasks: validTasks })
+        }
+      } catch (parseError) {
+        console.error('[v0] JSON parse error:', parseError)
+        console.log('[v0] Failed to parse:', jsonStr.substring(0, 200))
       }
     }
 
-    return NextResponse.json({ tasks: [], raw: responseText })
+    console.log('[v0] No valid JSON found in response')
+    return NextResponse.json({ tasks: [] })
   } catch (error) {
     console.error('[v0] Gemini API error:', error)
     return NextResponse.json({ tasks: [] })
