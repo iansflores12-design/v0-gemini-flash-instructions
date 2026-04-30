@@ -206,15 +206,20 @@ export async function createTaskWithMaterials(
   
   // Find or create subject if provided
   if (subjectName) {
-    const { data: existingSubject } = await supabase
+    // Search for existing subject with exact match (case-insensitive) for the current user
+    const { data: existingSubjects } = await supabase
       .from('subjects')
-      .select('id')
+      .select('id, name')
+      .eq('user_id', user.id)
       .ilike('name', subjectName)
-      .single()
     
-    if (existingSubject) {
-      subjectId = existingSubject.id
+    // Find exact match (case-insensitive) among results
+    const exactMatch = existingSubjects?.find(s => s.name.toLowerCase() === subjectName.toLowerCase())
+    
+    if (exactMatch) {
+      subjectId = exactMatch.id
     } else {
+      // Create new subject with random color
       const colors = ['#6750A4', '#625B71', '#7D5260', '#006874', '#006D3B', '#924C25']
       const randomColor = colors[Math.floor(Math.random() * colors.length)]
       
