@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 export default function SettingsPage() {
   const { theme, setTheme, darkMode, setDarkMode } = useTheme()
   const [customColor, setCustomColor] = useState('')
+  const [pendingChanges, setPendingChanges] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -18,12 +19,26 @@ export default function SettingsPage() {
     if (saved) setCustomColor(saved)
   }, [])
 
+  const handleDarkModeChange = (mode: 'light' | 'dark' | 'auto') => {
+    setDarkMode(mode)
+    localStorage.setItem('cleargrade-dark-mode', mode)
+    // Cambios de oscuro/claro se aplican sin recargar
+  }
+
+  const handleThemeChange = (themeId: string) => {
+    setTheme(themeId)
+    localStorage.removeItem('cleargrade-use-custom-color')
+    setPendingChanges(true)
+  }
+
   const handleColorChange = (color: string) => {
     setCustomColor(color)
-    localStorage.setItem('cleargrade-custom-color', color)
+    setPendingChanges(true)
+  }
+
+  const applyChanges = () => {
+    localStorage.setItem('cleargrade-custom-color', customColor || '#6750A4')
     localStorage.setItem('cleargrade-use-custom-color', 'true')
-    
-    // Reload para aplicar el color
     setTimeout(() => window.location.reload(), 200)
   }
 
@@ -48,10 +63,7 @@ export default function SettingsPage() {
             {(['light', 'auto', 'dark'] as const).map((mode) => (
               <button
                 key={mode}
-                onClick={() => {
-                  setDarkMode(mode)
-                  localStorage.setItem('cleargrade-dark-mode', mode)
-                }}
+                onClick={() => handleDarkModeChange(mode)}
                 className={cn(
                   'p-4 rounded-lg border-2 transition-all',
                   darkMode === mode
@@ -82,10 +94,7 @@ export default function SettingsPage() {
             {themes.map((t) => (
               <button
                 key={t.id}
-                onClick={() => {
-                  setTheme(t.id)
-                  localStorage.removeItem('cleargrade-use-custom-color')
-                }}
+                onClick={() => handleThemeChange(t.id)}
                 className={cn(
                   'p-4 rounded-lg border-2 transition-all text-left',
                   theme.id === t.id
@@ -112,6 +121,16 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
+          {pendingChanges && (
+            <Button
+              onClick={applyChanges}
+              className="w-full gap-2"
+              size="lg"
+            >
+              <RotateCw className="w-4 h-4" />
+              Aplicar Cambios
+            </Button>
+          )}
         </section>
 
         {/* Custom Color */}
@@ -124,12 +143,13 @@ export default function SettingsPage() {
             <input
               type="color"
               value={customColor || '#6750A4'}
-              onChange={(e) => setCustomColor(e.target.value)}
+              onChange={(e) => handleColorChange(e.target.value)}
               className="w-20 h-20 rounded-lg cursor-pointer border-2 border-border"
             />
             <div className="space-y-2">
               <Button
-                onClick={() => handleColorChange(customColor || '#6750A4')}
+                onClick={applyChanges}
+                disabled={!pendingChanges}
                 className="gap-2"
               >
                 <RotateCw className="w-4 h-4" />
@@ -165,8 +185,14 @@ export default function SettingsPage() {
             ].map((color) => (
               <button
                 key={color}
-                onClick={() => handleColorChange(color)}
-                className="w-full aspect-square rounded-lg border-2 border-border hover:border-primary transition-all"
+                onClick={() => {
+                  setCustomColor(color)
+                  setPendingChanges(true)
+                }}
+                className={cn(
+                  'w-full aspect-square rounded-lg border-2 transition-all',
+                  customColor === color ? 'border-foreground border-4' : 'border-border hover:border-primary'
+                )}
                 style={{ background: color }}
                 title={color}
               />
