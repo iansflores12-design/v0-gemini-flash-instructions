@@ -14,7 +14,7 @@ try {
 }
 
 async function callGeminiAPI(prompt: string): Promise<string> {
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData()
     const file = formData.get('pdf') as File | null
     const userId = formData.get('userId') as string | null
-    
+
     if (!file) {
       return NextResponse.json({ error: 'No se subio ningun archivo' }, { status: 400 })
     }
@@ -79,9 +79,9 @@ export async function POST(req: NextRequest) {
       const data = await pdf(Buffer.from(arrayBuffer))
       extractedText = data.text
     } else {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'PDF processing not available',
-        tasks: [] 
+        tasks: []
       }, { status: 500 })
     }
 
@@ -125,9 +125,9 @@ Asegúrate de que el JSON sea valido.`
 
   } catch (error) {
     console.error('[v0] Error processing file:', error)
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Error al procesar el archivo',
-      tasks: [] 
+      tasks: []
     }, { status: 500 })
   }
 }
