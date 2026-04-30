@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         const arrayBuffer = await file.arrayBuffer()
         const base64PDF = Buffer.from(arrayBuffer).toString('base64')
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
+        const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
 
         const prompt = `Eres un asistente que extrae tareas de agendas escolares. Analiza este PDF de una agenda escolar y extrae TODAS las tareas mencionadas.
 
