@@ -5,6 +5,8 @@ import { getAdminConfig } from '@/lib/admin-config'
 // Global Gemini API Key - used for all users
 const GEMINI_API_KEY = 'AIzaSyBthuQfIIQ2SQJtar_uslJiGoWqAr7UeCw'
 
+import { GoogleGenerativeAI } from '@google/generative-ai'
+
 // Dynamically import pdf-parse to avoid test file issues
 let pdf: any
 try {
@@ -12,6 +14,8 @@ try {
 } catch {
   pdf = null
 }
+
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
 
 async function callGeminiAPI(prompt: string): Promise<string> {
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
@@ -50,7 +54,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData()
     const file = formData.get('pdf') as File | null
     const userId = formData.get('userId') as string | null
-
+    
     if (!file) {
       return NextResponse.json({ error: 'No se subio ningun archivo' }, { status: 400 })
     }
@@ -74,28 +78,162 @@ export async function POST(req: NextRequest) {
       const buffer = Buffer.from(arrayBuffer)
       const result = await mammoth.extractRawText({ buffer })
       extractedText = result.value
-    } else if (pdf) {
+    } else if (isPDF) {
+      // Use Gemini's native PDF support - it handles PDFs directly
+      try {
+        const arrayBuffer = await file.arrayBuffer()
+        const base64PDF = Buffer.from(arrayBuffer).toString('base64')
+        
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
+        
+        const prompt = `Eres un asistente que extrae tareas de agendas escolares. Analiza este PDF de una agenda escolar y extrae TODAS las tareas mencionadas.
+
+INSTRUCCIONES:
+- Extrae cada tarea mencionada en el documento
+- Si no hay tareas claras, devuelve un array vacio
+- La fecha debe estar en formato YYYY-MM-DD (ej: 2026-05-15)
+- Si no hay fecha, usa la fecha actual o proximos 7 dias
+- Asigna un color a cada materia (elige colores como #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD, #FF8C94)
+- Los materiales son opcionales
+
+RESPONDE SOLO CON EL SIGUIENTE JSON VALIDO (sin explicaciones, sin markdown):
+{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor o puntos","materials":[{"name":"Material","quantity":"Cantidad"}]}]}`
+
+        const result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              mimeType: 'application/pdf',
+              data: base64PDF
+            }
+          }
+        ])
+        
+        const responseText = result.response.text()
+        console.log('[v0] Gemini PDF response:', responseText.substring(0, 500))
+        
+        // Clean and parse response
+        let cleanedText = responseText.trim()
+        cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
+        
+        const jsonMatch = cleanedText.match(/\{[\s\S]*"tasks"[\s\S]*\}/)
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0])
+            if (parsed.tasks && Array.isArray(parsed.tasks)) {
+              return NextResponse.json(parsed)
+            }
+          } catch (e) {
+            console.error('[v0] JSON parse error:', e)
+          }
+        }
+        
+        // If we get here, try fallback to pdf-parse
+        if (pdf) {
+          const data = await pdf(Buffer.from(arrayBuffer))
+          extractedText = data.text
+        } else {
+          return NextResponse.json({ tasks: [], raw: responseText })
+        }
+      } catch (error) {
+        console.error('[v0] Gemini PDF processing failed:', error)
+        // Fall through to pdf-parse below if available
+        if (pdf) {
+          const arrayBuffer = await file.arrayBuffer()
+          const data = await pdf(Buffer.from(arrayBuffer))
+          extractedText = data.text
+        } else {
+          throw error
+        }
+      }
+    } else {
+      return NextResponse.json({ 
+        error: 'PDF processing not available',
+        tasks: [] 
+      }, { status: 500 })
+    }
+      try {
+        const arrayBuffer = await file.arrayBuffer()
+        const base64PDF = Buffer.from(arrayBuffer).toString('base64')
+        
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
+        
+        const prompt = `Eres un asistente que extrae tareas de agendas escolares. Analiza este PDF de una agenda escolar y extrae TODAS las tareas mencionadas.
+
+INSTRUCCIONES:
+- Extrae cada tarea mencionada en el documento
+- Si no hay tareas claras, devuelve un array vacio
+- La fecha debe estar en formato YYYY-MM-DD (ej: 2026-05-15)
+- Si no hay fecha, usa la fecha actual o proximos 7 dias
+- Asigna un color a cada materia (elige colores como #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD, #FF8C94)
+- Los materiales son opcionales
+
+RESPONDE SOLO CON EL SIGUIENTE JSON VALIDO (sin explicaciones, sin markdown):
+{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor o puntos","materials":[{"name":"Material","quantity":"Cantidad"}]}]}`
+
+        const result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              mimeType: 'application/pdf',
+              data: base64PDF
+            }
+          }
+        ])
+        
+        const responseText = result.response.text()
+        console.log('[v0] Gemini PDF response:', responseText.substring(0, 500))
+        
+        // Clean and parse response
+        let cleanedText = responseText.trim()
+        cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
+        
+        const jsonMatch = cleanedText.match(/\{[\s\S]*"tasks"[\s\S]*\}/)
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0])
+            if (parsed.tasks && Array.isArray(parsed.tasks)) {
+              return NextResponse.json(parsed)
+            }
+          } catch (e) {
+            console.error('[v0] JSON parse error:', e)
+          }
+        }
+        
+        return NextResponse.json({ tasks: [], raw: responseText })
+      } catch (error) {
+        console.error('[v0] Gemini PDF processing failed, falling back to pdf-parse:', error)
+        // Fall through to pdf-parse below
+      }
+    }
+
+    // Fallback: extract text using pdf-parse for PDFs, or use DOCX text
+    if (isPDF) {
       const arrayBuffer = await file.arrayBuffer()
       const data = await pdf(Buffer.from(arrayBuffer))
       extractedText = data.text
-    } else {
-      return NextResponse.json({
-        error: 'PDF processing not available',
-        tasks: []
-      }, { status: 500 })
     }
 
     // Truncate text to avoid exceeding model context
-    const truncatedText = extractedText.substring(0, 3000) || 'No se pudo extraer texto'
+    const truncatedText = extractedText.substring(0, 8000) || 'No se pudo extraer texto'
+    console.log('[v0] Extracted text length:', truncatedText.length)
+    console.log('[v0] First 500 chars:', truncatedText.substring(0, 500))
 
-    const prompt = `Analiza el siguiente texto de una agenda escolar y extrae las tareas en formato JSON valido. Responde SOLO con el JSON, sin explicaciones.
+    const prompt = `Eres un asistente que extrae tareas de agendas escolares. Analiza el siguiente texto y extrae TODAS las tareas escolares mencionadas.
 
-Texto: ${truncatedText}
+TEXTO DE LA AGENDA:
+${truncatedText}
 
-Responde SOLO con JSON valido en este formato:
-{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor o puntos","materials":[{"name":"Material","quantity":"Cantidad"}]}]}
+INSTRUCCIONES:
+- Extrae cada tarea mencionada en el texto
+- Si no hay tareas claras, devuelve un array vacio
+- La fecha debe estar en formato YYYY-MM-DD (ej: 2026-05-15)
+- Si no hay fecha, usa la fecha actual o proximos 7 dias
+- Asigna un color a cada materia (elige colores como #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #DDA0DD, #FF8C94)
+- Los materiales son opcionales
 
-Asegúrate de que el JSON sea valido.`
+RESPONDE SOLO CON EL SIGUIENTE JSON VALIDO (sin explicaciones, sin markdown):
+{"tasks":[{"title":"Nombre de la tarea","subject":"Materia","subject_color":"#HEX","due_date":"YYYY-MM-DD","description":"Descripcion","value":"Valor o puntos","materials":[{"name":"Material","quantity":"Cantidad"}]}]}`
 
     const rawParseResult = await callGeminiAPI(prompt)
 
@@ -125,9 +263,9 @@ Asegúrate de que el JSON sea valido.`
 
   } catch (error) {
     console.error('[v0] Error processing file:', error)
-    return NextResponse.json({
+    return NextResponse.json({ 
       error: 'Error al procesar el archivo',
-      tasks: []
+      tasks: [] 
     }, { status: 500 })
   }
 }
