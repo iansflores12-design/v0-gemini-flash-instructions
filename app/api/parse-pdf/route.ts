@@ -69,10 +69,11 @@ export async function POST(req: NextRequest) {
 
     let extractedText = ''
 
-    if (isDOCX) {
-      const arrayBuffer = await file.arrayBuffer()
-      const result = await mammoth.extractRawText({ arrayBuffer })
-      extractedText = result.value
+  if (isDOCX) {
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  const result = await mammoth.extractRawText({ buffer })
+  extractedText = result.value
     } else if (pdf) {
       const arrayBuffer = await file.arrayBuffer()
       const data = await pdf(Buffer.from(arrayBuffer))
