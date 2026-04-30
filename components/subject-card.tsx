@@ -12,13 +12,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialogAction,
 } from '@/components/ui/alert-dialog'
 
 interface SubjectCardProps {
@@ -97,7 +96,7 @@ export function SubjectCard({ subject, taskCount }: SubjectCardProps) {
               <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
                 <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
-              <AlertDialogTitle>Eliminar materia</AlertDialogTitle>
+              <h2 className="text-lg font-semibold">Eliminar materia</h2>
             </div>
             <AlertDialogDescription className="space-y-2">
               <p>
