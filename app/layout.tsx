@@ -68,6 +68,12 @@ export default function RootLayout({
             font-display: swap;
           }
         ` }} />
+        {/* Google AdSense */}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-xxxxxxxxxxxxxxxx"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="font-sans antialiased bg-background min-h-screen">
         <ThemeProvider>
