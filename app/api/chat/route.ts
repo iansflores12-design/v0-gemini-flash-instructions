@@ -43,14 +43,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Mensaje y userId requeridos' }, { status: 400 })
     }
 
-    // Get admin config
+    // Get admin config (returns default if not found)
     const config = await getAdminConfig()
-    if (!config?.geminiApiKey) {
-      return NextResponse.json({ error: 'API no configurada' }, { status: 500 })
-    }
+    
+    // Debug mode: use provided API key or empty string (debug will still work)
+    const apiKey = config?.geminiApiKey || process.env.GEMINI_API_KEY || ''
 
     // Check chat limits if enabled
-    if (config.chatLimitsEnabled) {
+    if (config?.chatLimitsEnabled) {
       const supabase = await createClient()
       const { data: profile } = await supabase
         .from('profiles')
@@ -90,6 +90,15 @@ export async function POST(req: NextRequest) {
         })
     }
 
+    if (!apiKey) {
+      console.warn('[v0] No Gemini API key configured, using demo response')
+      return NextResponse.json({ 
+        reply: 'Modo demo: Gemini no configurado. Ve a /activate para agregar tu API key de Google Gemini.',
+        success: true,
+        demo: true
+      })
+    }
+
     const conversationHistory = history?.map((msg: { role: string; content: string }) =>
       `${msg.role === 'user' ? 'Usuario' : 'Asistente'}: ${msg.content}`
     ).join('\n') || ''
@@ -103,7 +112,7 @@ Usuario: ${message}
 
 Responde como Asistente:`
 
-    const reply = await callGeminiAPI(prompt, config.geminiApiKey)
+    const reply = await callGeminiAPI(prompt, apiKey)
 
     return NextResponse.json({ reply, success: true })
 

@@ -83,14 +83,30 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    // Get admin config
+    // Get admin config (with fallback for debug mode)
     const config = await getAdminConfig()
-    if (!config?.geminiApiKey) {
-      return NextResponse.json({ error: 'Gemini no configurado' }, { status: 500 })
-    }
+    const apiKey = config?.geminiApiKey || process.env.GEMINI_API_KEY || ''
 
     // Truncate text to avoid exceeding model context
     const truncatedText = extractedText.substring(0, 3000) || 'No se pudo extraer texto'
+
+    if (!apiKey) {
+      console.warn('[v0] No Gemini API key, returning demo tasks')
+      return NextResponse.json({
+        tasks: [
+          {
+            title: 'Demo: Configura Gemini en /activate',
+            subject: 'Configuración',
+            subject_color: '#6750A4',
+            due_date: new Date().toISOString().split('T')[0],
+            description: 'Agrega tu API key de Google Gemini para usar el parseador automático',
+            value: 'Demo',
+            materials: []
+          }
+        ],
+        demo: true
+      })
+    }
 
     const prompt = `Analiza el siguiente texto de una agenda escolar y extrae las tareas en formato JSON valido. Responde SOLO con el JSON, sin explicaciones.
 
@@ -101,7 +117,7 @@ Responde SOLO con JSON valido en este formato:
 
 Asegúrate de que el JSON sea valido.`
 
-    const rawParseResult = await callGeminiAPI(prompt, config.geminiApiKey)
+    const rawParseResult = await callGeminiAPI(prompt, apiKey)
     
     let responseText = rawParseResult.trim()
 
