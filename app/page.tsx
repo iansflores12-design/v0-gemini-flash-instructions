@@ -27,7 +27,7 @@ export default async function LandingPage() {
           {/* Logo */}
           <div className="flex justify-center mb-6 animate-scale-in">
             <img
-              src="/cleargrade-icon.svg"
+              src="/cleargrade-logo.png"
               alt="ClearGrade"
               className="w-24 h-24"
             />
