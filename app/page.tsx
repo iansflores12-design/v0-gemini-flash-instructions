@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Sparkles, CheckCircle2, Calendar, Package, FileUp } from 'lucide-react'
+import { Sparkles, CheckCircle2, Calendar, Package, FileUp, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -24,13 +24,11 @@ export default async function LandingPage() {
       {/* Hero Section */}
       <section className="px-4 pt-20 pb-16">
         <div className="max-w-md mx-auto text-center">
-          {/* Logo */}
+          {/* Check Icon */}
           <div className="flex justify-center mb-6 animate-scale-in">
-            <img
-              src="/cleargrade-logo.png"
-              alt="ClearGrade"
-              className="w-24 h-24"
-            />
+            <div className="p-4 rounded-full bg-primary/10">
+              <Check className="w-16 h-16 text-primary" strokeWidth={2.5} />
+            </div>
           </div>
 
           <h1 className="text-5xl font-bold text-foreground mb-3 text-balance animate-slide-up tracking-tight">
