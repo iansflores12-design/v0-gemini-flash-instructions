@@ -108,6 +108,18 @@ RESPONDE SOLO CON UN JSON VALIDO (sin explicaciones, sin markdown, sin backticks
   }
 }
 
+function repairJSON(str: string): string {
+  // Remove trailing commas before ] or }
+  str = str.replace(/,(\s*[}\]])/g, '$1')
+  // Fix missing commas between array elements (common Gemini issue)
+  str = str.replace(/"]\s*"/g, '", "')
+  str = str.replace(/}\s*"/g, '}, "')
+  str = str.replace(/]\s*"/g, '], "')
+  str = str.replace(/}\s*{/g, '},{')
+  str = str.replace(/]\s*{/g, '],{')
+  return str
+}
+
 async function processTextWithGemini(extractedText: string) {
   const truncatedText = extractedText.substring(0, 8000) || 'No se pudo extraer texto'
   console.log('[v0] Text length:', truncatedText.length)
@@ -123,7 +135,6 @@ INSTRUCCIONES:
 - La fecha debe estar en formato YYYY-MM-DD (ej: 2026-05-15)
 - Si no hay fecha, usa una fecha dentro de los proximos 7 dias
 - Los materiales son opcionales
-- Escapa correctamente comillas dobles en strings con backslash
 
 RESPONDE SOLO CON UN JSON VALIDO (sin explicaciones, sin markdown, sin backticks):
 {"tasks":[{"title":"Nombre de la tarea","subject":"Materia o null","due_date":"YYYY-MM-DD","description":"Descripcion o null","value":"Valor en puntos/porcentaje o null","materials":[]}]}`
@@ -141,46 +152,69 @@ RESPONDE SOLO CON UN JSON VALIDO (sin explicaciones, sin markdown, sin backticks
     const data = await response.json()
     const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
     
-    console.log('[v0] Raw API response:', responseText.substring(0, 200))
+    console.log('[v0] Raw API response:', responseText.substring(0, 300))
 
     // Clean up response
     let cleanedText = responseText.trim()
-    
-    // Remove markdown code blocks if present
     cleanedText = cleanedText.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim()
-    
-    // Remove any leading/trailing whitespace
-    cleanedText = cleanedText.trim()
 
-    // Extract JSON object using a more robust method
-    const jsonStart = cleanedText.indexOf('{')
-    const jsonEnd = cleanedText.lastIndexOf('}')
+    // Try multiple extraction strategies
+    let parsed: any = null
     
-    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-      const jsonStr = cleanedText.substring(jsonStart, jsonEnd + 1)
-      
+    // Strategy 1: Extract JSON array
+    const arrayMatch = cleanedText.match(/\[[\s\S]*\]/)
+    if (arrayMatch) {
       try {
-        // Validate JSON with better error handling
-        const parsed = JSON.parse(jsonStr)
-        
-        if (parsed.tasks && Array.isArray(parsed.tasks)) {
-          // Ensure all required fields exist
-          const validTasks = parsed.tasks.map((task: any) => ({
-            title: task.title || 'Sin título',
-            subject: task.subject || null,
-            due_date: task.due_date || new Date().toISOString().split('T')[0],
-            description: task.description || null,
-            value: task.value || null,
-            materials: Array.isArray(task.materials) ? task.materials : []
-          }))
-          
-          console.log('[v0] Successfully parsed tasks:', validTasks.length)
-          return NextResponse.json({ tasks: validTasks })
-        }
-      } catch (parseError) {
-        console.error('[v0] JSON parse error:', parseError)
-        console.log('[v0] Failed to parse:', jsonStr.substring(0, 200))
+        parsed = { tasks: JSON.parse(arrayMatch[0]) }
+      } catch {
+        try {
+          parsed = { tasks: JSON.parse(repairJSON(arrayMatch[0])) }
+        } catch {}
       }
+    }
+    
+    // Strategy 2: Extract JSON object with tasks
+    if (!parsed) {
+      const objMatch = cleanedText.match(/\{[\s\S]*"tasks"[\s\S]*\}/)
+      if (objMatch) {
+        try {
+          parsed = JSON.parse(objMatch[0])
+        } catch {
+          try {
+            parsed = JSON.parse(repairJSON(objMatch[0]))
+          } catch {}
+        }
+      }
+    }
+    
+    // Strategy 3: Find outermost braces
+    if (!parsed) {
+      const jsonStart = cleanedText.indexOf('{')
+      const jsonEnd = cleanedText.lastIndexOf('}')
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        const jsonStr = cleanedText.substring(jsonStart, jsonEnd + 1)
+        try {
+          parsed = JSON.parse(jsonStr)
+        } catch {
+          try {
+            parsed = JSON.parse(repairJSON(jsonStr))
+          } catch {}
+        }
+      }
+    }
+
+    if (parsed && parsed.tasks && Array.isArray(parsed.tasks)) {
+      const validTasks = parsed.tasks.map((task: any) => ({
+        title: task.title || 'Sin título',
+        subject: task.subject || null,
+        due_date: task.due_date || new Date().toISOString().split('T')[0],
+        description: task.description || null,
+        value: task.value || null,
+        materials: Array.isArray(task.materials) ? task.materials.filter((m: any) => m.name && m.name.trim()) : []
+      }))
+      
+      console.log('[v0] Successfully parsed tasks:', validTasks.length)
+      return NextResponse.json({ tasks: validTasks })
     }
 
     console.log('[v0] No valid JSON found in response')

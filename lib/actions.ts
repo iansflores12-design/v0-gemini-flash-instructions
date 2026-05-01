@@ -252,18 +252,19 @@ export async function createTaskWithMaterials(
   if (taskError) throw taskError
   
   // Create materials
-  if (materials.length > 0) {
-    const materialsToInsert = materials.map(m => ({
+  const validMaterials = materials.filter(m => m.name && m.name.trim() !== '')
+  if (validMaterials.length > 0) {
+    const materialsToInsert = validMaterials.map(m => ({
       task_id: task.id,
-      name: m.name,
+      name: m.name.trim(),
       quantity: m.quantity || null,
       user_id: user.id
     }))
-    
+
     const { error: materialsError } = await supabase
       .from('materials')
       .insert(materialsToInsert)
-    
+
     if (materialsError) throw materialsError
   }
   
