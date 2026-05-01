@@ -36,9 +36,9 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
     const minDate = new Date(Math.min(...taskDates.map(d => d.getTime())))
     const maxDate = new Date(Math.max(...taskDates.map(d => d.getTime())))
     
-    // Start from the earliest task's week
-    const firstWeekStart = startOfWeek(minDate, { weekStartsOn: 1 })
-    const lastWeekEnd = endOfWeek(maxDate, { weekStartsOn: 1 })
+    // Start from the earliest task's Monday
+    const firstWeekStart = startOfWeek(minDate, { weekStartsOn: 1 }) // Monday
+    const lastWeekEnd = endOfWeek(maxDate, { weekStartsOn: 1 }) // Sunday
     
     // Calculate number of weeks needed
     const totalWeeks = Math.ceil((lastWeekEnd.getTime() - firstWeekStart.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1
@@ -46,8 +46,10 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
     const weeksList: WeekData[] = []
     
     for (let i = 0; i < totalWeeks; i++) {
-      const weekStart = startOfWeek(addWeeks(firstWeekStart, i), { weekStartsOn: 1 })
-      const weekEnd = endOfWeek(addWeeks(firstWeekStart, i), { weekStartsOn: 1 })
+      const weekStart = startOfWeek(addWeeks(firstWeekStart, i), { weekStartsOn: 1 }) // Monday
+      // Get Friday of the same week (4 days after Monday)
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekEnd.getDate() + 4) // Friday
       
       const weekTasks = tasks.filter(task => {
         const dueDate = parseISO(task.due_date)
