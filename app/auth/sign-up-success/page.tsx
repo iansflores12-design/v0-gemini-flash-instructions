@@ -1,4 +1,4 @@
-import { BookOpen, Mail } from 'lucide-react'
+import { BookOpen, Mail, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -24,11 +24,20 @@ export default function SignUpSuccessPage() {
           </div>
         </div>
 
-        <Link href="/auth/login">
-          <Button variant="outline" className="w-full h-12 rounded-xl">
-            Volver al inicio
-          </Button>
-        </Link>
+        <div className="flex flex-col gap-3 mb-4">
+          <a href="https://mail.google.com" target="_blank" rel="noopener noreferrer">
+            <Button className="w-full h-12 rounded-xl gap-2">
+              <Mail className="w-4 h-4" />
+              Abrir Gmail
+              <ExternalLink className="w-4 h-4" />
+            </Button>
+          </a>
+          <Link href="/auth/login">
+            <Button variant="outline" className="w-full h-12 rounded-xl">
+              Volver al inicio
+            </Button>
+          </Link>
+        </div>
       </div>
     </main>
   )
