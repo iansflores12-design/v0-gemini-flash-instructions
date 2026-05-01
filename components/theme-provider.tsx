@@ -65,17 +65,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     setDarkModeState(savedDarkMode)
     
-    if (savedThemeId) {
+    // Apply theme or custom color
+    if (useCustom === 'true' && savedCustomColor) {
+      // User has custom color saved, use it
+      setCustomPrimaryColorState(savedCustomColor)
+      applyCustomColor(savedCustomColor)
+    } else if (savedThemeId) {
+      // User has saved a theme, use it
       const savedTheme = getThemeById(savedThemeId)
       if (savedTheme) {
         setThemeState(savedTheme)
         applyTheme(savedTheme)
       }
-    }
-    
-    if (useCustom === 'true' && savedCustomColor) {
-      setCustomPrimaryColorState(savedCustomColor)
-      applyCustomColor(savedCustomColor)
+    } else {
+      // Default: Apply Monet green #00D418
+      const defaultColor = '#00D418'
+      setCustomPrimaryColorState(defaultColor)
+      applyCustomColor(defaultColor)
     }
 
     // Apply dark mode AFTER theme is set
