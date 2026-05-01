@@ -36,6 +36,10 @@ export async function createSubject(name: string, colorCode: string = '#6750A4')
 
 export async function getTasks(): Promise<Task[]> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) return []
+
   const { data, error } = await supabase
     .from('tasks')
     .select(`
@@ -43,6 +47,7 @@ export async function getTasks(): Promise<Task[]> {
       subject:subjects(*),
       materials(*)
     `)
+    .eq('user_id', user.id)
     .order('due_date', { ascending: true })
   
   if (error) throw error
