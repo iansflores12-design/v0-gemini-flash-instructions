@@ -163,7 +163,7 @@ export async function createTaskWithMaterials(
   subjectName: string | undefined,
   materials: { name: string; quantity?: string }[],
   description?: string,
-  value?: string
+  value?: string // TODO: Add to DB schema in migration 002_add_task_value.sql
 ): Promise<Task | { error: string; limitExceeded?: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -236,7 +236,7 @@ export async function createTaskWithMaterials(
     }
   }
   
-  // Create task with description and value
+  // Create task with description (value field not yet in schema)
   const { data: task, error: taskError } = await supabase
     .from('tasks')
     .insert({
@@ -244,8 +244,7 @@ export async function createTaskWithMaterials(
       due_date: dueDate,
       subject_id: subjectId,
       user_id: user.id,
-      description: description || null,
-      value: value || null
+      description: description || null
     })
     .select()
     .single()
