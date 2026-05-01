@@ -43,18 +43,21 @@ export async function POST(req: NextRequest) {
 
         const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
 
-        const prompt = `Eres un asistente que extrae tareas de agendas escolares. Analiza este PDF de una agenda escolar y extrae TODAS las tareas mencionadas.
+        const prompt = `Eres un asistente experto que extrae tareas de agendas escolares. Analiza este PDF y extrae TODAS las tareas, trabajos, examenes, proyectos y actividades mencionadas.
 
-INSTRUCCIONES:
-- Extrae cada tarea mencionada en el documento
-- Si no hay tareas claras, devuelve un array vacio
-- La fecha debe estar en formato YYYY-MM-DD (ej: 2026-05-15)
-- Si no hay fecha, usa una fecha dentro de los proximos 7 dias
-- Los materiales son opcionales
-- Escapa correctamente comillas dobles en strings
+INSTRUCCIONES IMPORTANTES:
+1. Busca en TODO el documento: tablas, listas, texto, etc.
+2. Una agenda escolar tipicamente tiene: Fecha, Actividad/Tarea, Objetivo, Descripcion, Materiales, Rubrica/Valor
+3. Extrae CADA actividad como una tarea separada (Homework, Classwork, Quiz, Exam, Project, etc.)
+4. La fecha debe estar en formato YYYY-MM-DD. El año es 2026 si no se especifica.
+5. Para rangos de fechas como "April 21st to 24th", usa la fecha final (2026-04-24)
+6. La materia (subject) es el nombre de la clase mencionada en el encabezado (ej: "Computer", "Math", "Science")
+7. El valor (value) es el porcentaje o puntos (ej: "5%", "10%", "Total 15%")
+8. La descripcion debe incluir las instrucciones detalladas de la tarea
+9. Los materiales son los items necesarios listados (Notebook, Computer, Glue, etc.)
 
-RESPONDE SOLO CON UN JSON VALIDO (sin explicaciones, sin markdown, sin backticks):
-{"tasks":[{"title":"Nombre de la tarea","subject":"Materia o null","due_date":"YYYY-MM-DD","description":"Descripcion o null","value":"Valor en puntos/porcentaje o null","materials":[]}]}`
+RESPONDE SOLO CON JSON VALIDO (sin explicaciones, sin markdown):
+{"tasks":[{"title":"Nombre exacto de la actividad","subject":"Nombre de la materia","due_date":"YYYY-MM-DD","description":"Instrucciones completas","value":"Porcentaje o puntos totales","materials":[{"name":"Material","quantity":"1"}]}]}`
 
         const result = await model.generateContent([
           prompt,
@@ -124,20 +127,23 @@ async function processTextWithGemini(extractedText: string) {
   const truncatedText = extractedText.substring(0, 8000) || 'No se pudo extraer texto'
   console.log('[v0] Text length:', truncatedText.length)
 
-  const prompt = `Eres un asistente que extrae tareas de agendas escolares. Analiza el siguiente texto y extrae TODAS las tareas escolares mencionadas.
+  const prompt = `Eres un asistente experto que extrae tareas de agendas escolares. Analiza el siguiente texto y extrae TODAS las tareas, trabajos, examenes, proyectos y actividades.
 
 TEXTO DE LA AGENDA:
 ${truncatedText}
 
-INSTRUCCIONES:
-- Extrae cada tarea mencionada en el texto
-- Si no hay tareas claras, devuelve un array vacio
-- La fecha debe estar en formato YYYY-MM-DD (ej: 2026-05-15)
-- Si no hay fecha, usa una fecha dentro de los proximos 7 dias
-- Los materiales son opcionales
+INSTRUCCIONES IMPORTANTES:
+1. Busca TODAS las actividades: Homework, Classwork, Quiz, Exam, Project, Research, etc.
+2. Una agenda escolar tiene: Fecha, Actividad, Objetivo, Descripcion, Materiales, Valor/Rubrica
+3. La fecha debe estar en formato YYYY-MM-DD. El ano es 2026 si no se especifica.
+4. Para rangos de fechas como "April 21st to 24th" o "May 4th to 8th", usa la fecha final.
+5. La materia (subject) es el nombre de la clase (Computer, Math, Science, etc.)
+6. El valor (value) es el porcentaje o puntos totales (ej: "5%", "Total 10%", "15%")
+7. La descripcion debe incluir TODAS las instrucciones de la tarea
+8. Los materiales son los items necesarios (Notebook, Computer, Glue, Scissors, etc.)
 
-RESPONDE SOLO CON UN JSON VALIDO (sin explicaciones, sin markdown, sin backticks):
-{"tasks":[{"title":"Nombre de la tarea","subject":"Materia o null","due_date":"YYYY-MM-DD","description":"Descripcion o null","value":"Valor en puntos/porcentaje o null","materials":[]}]}`
+RESPONDE SOLO CON JSON VALIDO (sin markdown, sin backticks):
+{"tasks":[{"title":"Nombre exacto","subject":"Materia","due_date":"YYYY-MM-DD","description":"Instrucciones completas","value":"Porcentaje total","materials":[{"name":"Material"}]}]}`
 
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
@@ -145,7 +151,7 @@ RESPONDE SOLO CON UN JSON VALIDO (sin explicaciones, sin markdown, sin backticks
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 2000, temperature: 0.3 }
+        generationConfig: { maxOutputTokens: 4000, temperature: 0.2 }
       })
     })
 

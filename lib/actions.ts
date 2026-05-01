@@ -10,20 +10,13 @@ export async function getSubjects(): Promise<Subject[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
-  console.log('[v0] getSubjects - user:', user?.id)
-  
-  if (!user) {
-    console.log('[v0] getSubjects - no user')
-    return []
-  }
+  if (!user) return []
 
   const { data, error } = await supabase
     .from('subjects')
     .select('*')
     .eq('user_id', user.id)
     .order('name')
-  
-  console.log('[v0] getSubjects - data:', data?.length, 'error:', error)
   
   if (error) throw error
   return data || []
@@ -50,12 +43,7 @@ export async function getTasks(): Promise<Task[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
-  console.log('[v0] getTasks - user:', user?.id)
-  
-  if (!user) {
-    console.log('[v0] getTasks - no user found')
-    return []
-  }
+  if (!user) return []
 
   const { data, error } = await supabase
     .from('tasks')
@@ -74,12 +62,7 @@ export async function getTasks(): Promise<Task[]> {
     .eq('user_id', user.id)
     .order('due_date', { ascending: true })
   
-  console.log('[v0] getTasks - found', data?.length, 'tasks, error:', error?.message)
-  
-  if (error) {
-    console.error('[v0] getTasks error:', error)
-    throw error
-  }
+  if (error) throw error
   return data || []
 }
 
@@ -202,8 +185,6 @@ export async function createTaskWithMaterials(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
-  console.log('[v0] createTaskWithMaterials - user:', user?.id, 'title:', title, 'subject:', subjectName, 'date:', dueDate)
-  
   if (!user) throw new Error('Not authenticated')
 
   // Check agenda limits if enabled
@@ -251,14 +232,11 @@ export async function createTaskWithMaterials(
       .eq('user_id', user.id)
       .ilike('name', subjectName)
     
-    console.log('[v0] existingSubjects:', existingSubjects?.length)
-    
     // Find exact match (case-insensitive) among results
     const exactMatch = existingSubjects?.find(s => s.name.toLowerCase() === subjectName.toLowerCase())
     
     if (exactMatch) {
       subjectId = exactMatch.id
-      console.log('[v0] found existing subject:', subjectId)
     } else {
       // Create new subject with random color
       const colors = ['#6750A4', '#625B71', '#7D5260', '#006874', '#006D3B', '#924C25']
@@ -272,7 +250,6 @@ export async function createTaskWithMaterials(
       
       if (subjectError) throw subjectError
       subjectId = newSubject.id
-      console.log('[v0] created new subject:', subjectId)
     }
   }
   
@@ -289,8 +266,6 @@ export async function createTaskWithMaterials(
     .select()
     .single()
   
-  console.log('[v0] task created:', task?.id, 'error:', taskError?.message)
-  
   if (taskError) throw taskError
   
   // Create materials
@@ -303,19 +278,13 @@ export async function createTaskWithMaterials(
       user_id: user.id
     }))
 
-    console.log('[v0] inserting', materialsToInsert.length, 'materials')
-
     const { error: materialsError } = await supabase
       .from('materials')
       .insert(materialsToInsert)
 
-    if (materialsError) {
-      console.error('[v0] materials error:', materialsError)
-      throw materialsError
-    }
+    if (materialsError) throw materialsError
   }
   
-  console.log('[v0] task fully created with materials')
   revalidatePath('/dashboard')
   return task
 }

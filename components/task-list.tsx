@@ -27,14 +27,27 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
 
-  // Generate weeks data
+  // Generate weeks data based on actual task dates
   const weeks = useMemo(() => {
-    const today = new Date()
+    if (tasks.length === 0) return []
+    
+    // Find date range from tasks
+    const taskDates = tasks.map(t => parseISO(t.due_date))
+    const minDate = new Date(Math.min(...taskDates.map(d => d.getTime())))
+    const maxDate = new Date(Math.max(...taskDates.map(d => d.getTime())))
+    
+    // Start from the earliest task's week
+    const firstWeekStart = startOfWeek(minDate, { weekStartsOn: 1 })
+    const lastWeekEnd = endOfWeek(maxDate, { weekStartsOn: 1 })
+    
+    // Calculate number of weeks needed
+    const totalWeeks = Math.ceil((lastWeekEnd.getTime() - firstWeekStart.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1
+    
     const weeksList: WeekData[] = []
     
-    for (let i = 0; i < 12; i++) {
-      const weekStart = startOfWeek(addWeeks(today, i), { weekStartsOn: 1 })
-      const weekEnd = endOfWeek(addWeeks(today, i), { weekStartsOn: 1 })
+    for (let i = 0; i < totalWeeks; i++) {
+      const weekStart = startOfWeek(addWeeks(firstWeekStart, i), { weekStartsOn: 1 })
+      const weekEnd = endOfWeek(addWeeks(firstWeekStart, i), { weekStartsOn: 1 })
       
       const weekTasks = tasks.filter(task => {
         const dueDate = parseISO(task.due_date)
@@ -47,7 +60,7 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
 
       weeksList.push({
         weekNumber: i + 1,
-        label: i === 0 ? 'Esta semana' : i === 1 ? 'Proxima semana' : `Semana ${i + 1}`,
+        label: i === 0 ? 'Semana 1' : `Semana ${i + 1}`,
         shortLabel: `S${i + 1}: ${startDay}-${endDay} ${month}`,
         startDate: weekStart,
         endDate: weekEnd,
@@ -55,7 +68,8 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
       })
     }
     
-    return weeksList.filter(w => w.tasks.length > 0 || w.weekNumber <= 4)
+    // Only show weeks that have tasks
+    return weeksList.filter(w => w.tasks.length > 0)
   }, [tasks])
 
   const currentWeek = weeks[selectedWeek] || weeks[0]
