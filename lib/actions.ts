@@ -253,7 +253,11 @@ export async function createTaskWithMaterials(
     }
   }
   
-  // Create task with description (value field not yet in schema)
+  // Create task with description and value embedded as JSON
+  const fullDescription = value 
+    ? JSON.stringify({ value, description })
+    : description || null
+  
   const { data: task, error: taskError } = await supabase
     .from('tasks')
     .insert({
@@ -261,7 +265,7 @@ export async function createTaskWithMaterials(
       due_date: dueDate,
       subject_id: subjectId,
       user_id: user.id,
-      description: description || null
+      description: fullDescription
     })
     .select()
     .single()

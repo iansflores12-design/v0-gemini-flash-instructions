@@ -7,6 +7,7 @@ import { Check, ChevronRight, Package, Trash2, Loader2, Calendar, ExternalLink, 
 import { cn } from '@/lib/utils'
 import { toggleTaskDone, deleteTask } from '@/lib/actions'
 import type { Task } from '@/lib/types'
+import { parseTaskValue, getTaskDescription, getTaskValue } from '@/lib/types'
 
 interface TaskListProps {
   tasks: Task[]
@@ -288,9 +289,9 @@ function TaskCard({
                 <Calendar className="w-3 h-3" />
                 S{weekNumber}: {getDateLabel()}
               </span>
-              {task.value && (
+              {getTaskValue(task) && (
                 <span className="flex items-center gap-1 text-primary font-medium">
-                  {task.value}
+                  {getTaskValue(task)}
                 </span>
               )}
             </div>
@@ -363,23 +364,23 @@ function TaskCard({
               </div>
             </div>
 
-            {task.value && (
+            {getTaskValue(task) && (
               <div className="flex items-center gap-3">
                 <Star className="w-5 h-5 text-primary" />
                 <div>
                   <p className="text-xs text-muted-foreground">Valor</p>
-                  <p className="font-semibold text-primary">{task.value}</p>
+                  <p className="font-semibold text-primary">{getTaskValue(task)}</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* Description */}
-          {task.description && (
+          {getTaskDescription(task) && (
             <div className="px-4 pt-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Descripcion</p>
               <div className="p-3 rounded-xl bg-secondary/50">
-                <p className="text-sm text-foreground whitespace-pre-wrap">{task.description}</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{getTaskDescription(task)}</p>
               </div>
             </div>
           )}

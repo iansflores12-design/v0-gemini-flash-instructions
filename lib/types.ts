@@ -106,3 +106,29 @@ export const SUBSCRIPTION_LIMITS: Record<string, SubscriptionLimits> = {
     adsFree: true
   }
 }
+
+// Helper functions to parse value from description
+export function parseTaskValue(task: Task): { value: string | null; description: string | null } {
+  if (!task.description) return { value: null, description: null }
+  
+  try {
+    const parsed = JSON.parse(task.description)
+    if (parsed.value && parsed.description) {
+      return { value: parsed.value, description: parsed.description }
+    }
+  } catch {
+    // Not JSON, return as-is
+  }
+  
+  return { value: null, description: task.description }
+}
+
+export function getTaskDescription(task: Task): string | null {
+  const { description } = parseTaskValue(task)
+  return description
+}
+
+export function getTaskValue(task: Task): string | null {
+  const { value } = parseTaskValue(task)
+  return value
+}
