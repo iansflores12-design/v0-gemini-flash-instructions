@@ -266,7 +266,7 @@ export const EMAIL_TEMPLATES = {
 
         <div class="content">
             <div class="content-section">
-                <p class="greeting">Hola <strong>{{ user_name }}</strong>,</p>
+                <p class="greeting">Hola,</p>
                 <p class="message">
                     Gracias por crear tu cuenta en <strong>ClearGrade</strong>. Para completar el registro y acceder a todas nuestras funciones, necesitamos que confirmes tu dirección de email.
                 </p>
