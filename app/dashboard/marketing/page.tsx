@@ -9,7 +9,8 @@ import Link from 'next/link'
 interface Subscriber {
   id: string
   email: string
-  full_name: string
+  first_name: string
+  last_name: string
   created_at: string
   subscribed: boolean
 }
@@ -41,9 +42,10 @@ export default function MarketingPage() {
 
   const exportCSV = () => {
     const csv = [
-      ['Nombre', 'Email', 'Fecha de Registro', 'Suscrito'],
+      ['Nombre', 'Apellido', 'Email', 'Fecha de Registro', 'Suscrito'],
       ...subscribers.map((s) => [
-        s.full_name,
+        s.first_name,
+        s.last_name,
         s.email,
         new Date(s.created_at).toLocaleDateString('es-ES'),
         s.subscribed ? 'Sí' : 'No',
@@ -138,6 +140,9 @@ export default function MarketingPage() {
                       Nombre
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                      Apellido
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
                       Email
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
@@ -155,7 +160,10 @@ export default function MarketingPage() {
                   {subscribers.map((subscriber) => (
                     <tr key={subscriber.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
                       <td className="px-6 py-4 text-sm font-medium text-foreground">
-                        {subscriber.full_name}
+                        {subscriber.first_name}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-foreground">
+                        {subscriber.last_name}
                       </td>
                       <td className="px-6 py-4 text-sm text-muted-foreground font-mono">
                         {subscriber.email}
