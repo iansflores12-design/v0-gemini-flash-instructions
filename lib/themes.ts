@@ -1,333 +1,292 @@
-// ClearGrade Theme System - Light themes only, dark mode via toggle
+// ClearGrade Theme System
+// Each theme defines ALL CSS variables for both light and dark mode.
+// The ThemeProvider applies these via JS — globals.css is the SSR default only.
+// Default palette: #090c04 | #171d10 | #516435 | #99be64
+
 export interface Theme {
   id: string
   name: string
   description: string
-  preview: {
-    primary: string
-    secondary: string
-    accent: string
-    background: string
-  }
-  light: string // Light mode CSS
-  dark: string  // Dark mode CSS
+  preview: { primary: string; secondary: string; accent: string }
+  light: Record<string, string>
+  dark: Record<string, string>
 }
+
+// Helper: build a full token set from a hue (oklch-based M3 tonal palette)
+function greenTokens(hue: number, lightness: number, chroma: number) {
+  return {
+    light: {
+      '--background':            `oklch(0.98 0.012 ${hue})`,
+      '--foreground':            `oklch(0.12 0.025 ${hue})`,
+      '--card':                  `oklch(1 0 0)`,
+      '--card-foreground':       `oklch(0.12 0.025 ${hue})`,
+      '--popover':               `oklch(1 0 0)`,
+      '--popover-foreground':    `oklch(0.12 0.025 ${hue})`,
+      '--primary':               `oklch(${lightness} ${chroma} ${hue})`,
+      '--primary-foreground':    `oklch(0.98 0.005 ${hue})`,
+      '--secondary':             `oklch(0.90 ${chroma * 0.4} ${hue})`,
+      '--secondary-foreground':  `oklch(0.25 ${chroma * 0.6} ${hue})`,
+      '--muted':                 `oklch(0.94 ${chroma * 0.2} ${hue})`,
+      '--muted-foreground':      `oklch(0.50 ${chroma * 0.4} ${hue})`,
+      '--accent':                `oklch(0.72 ${chroma * 1.2} ${hue})`,
+      '--accent-foreground':     `oklch(0.12 0.025 ${hue})`,
+      '--destructive':           `oklch(0.55 0.22 25)`,
+      '--destructive-foreground':`oklch(0.98 0.01 25)`,
+      '--border':                `oklch(0.88 ${chroma * 0.4} ${hue})`,
+      '--input':                 `oklch(0.93 ${chroma * 0.3} ${hue})`,
+      '--ring':                  `oklch(${lightness} ${chroma} ${hue})`,
+      '--radius':                '1rem',
+    },
+    dark: {
+      '--background':            `oklch(0.10 0.02 ${hue})`,
+      '--foreground':            `oklch(0.93 0.02 ${hue})`,
+      '--card':                  `oklch(0.15 0.02 ${hue})`,
+      '--card-foreground':       `oklch(0.93 0.02 ${hue})`,
+      '--popover':               `oklch(0.15 0.02 ${hue})`,
+      '--popover-foreground':    `oklch(0.93 0.02 ${hue})`,
+      '--primary':               `oklch(${lightness + 0.26} ${chroma} ${hue})`,
+      '--primary-foreground':    `oklch(0.10 0.02 ${hue})`,
+      '--secondary':             `oklch(0.22 ${chroma * 0.4} ${hue})`,
+      '--secondary-foreground':  `oklch(0.90 0.02 ${hue})`,
+      '--muted':                 `oklch(0.20 ${chroma * 0.3} ${hue})`,
+      '--muted-foreground':      `oklch(0.65 ${chroma * 0.4} ${hue})`,
+      '--accent':                `oklch(0.55 ${chroma} ${hue})`,
+      '--accent-foreground':     `oklch(0.93 0.02 ${hue})`,
+      '--destructive':           `oklch(0.65 0.22 25)`,
+      '--destructive-foreground':`oklch(0.98 0.01 25)`,
+      '--border':                `oklch(0.22 ${chroma * 0.4} ${hue})`,
+      '--input':                 `oklch(0.18 ${chroma * 0.3} ${hue})`,
+      '--ring':                  `oklch(${lightness + 0.26} ${chroma} ${hue})`,
+      '--radius':                '1rem',
+    },
+  }
+}
+
+const defaultGreen = greenTokens(135, 0.42, 0.10)
 
 export const themes: Theme[] = [
   {
     id: 'm3e',
-    name: 'Material 3 Expressive',
-    description: 'Soporte Monet, colores dinamicos Android 12+',
-    preview: { primary: '#6750A4', secondary: '#E8DEF8', accent: '#4FC3F7', background: '#FFFBFE' },
-    light: `
-      --background: oklch(0.98 0.005 270);
-      --foreground: oklch(0.15 0.02 270);
-      --card: oklch(1 0 0);
-      --card-foreground: oklch(0.15 0.02 270);
-      --primary: oklch(0.45 0.18 270);
-      --primary-foreground: oklch(0.98 0.005 270);
-      --secondary: oklch(0.92 0.03 270);
-      --secondary-foreground: oklch(0.25 0.08 270);
-      --muted: oklch(0.95 0.01 270);
-      --muted-foreground: oklch(0.45 0.02 270);
-      --accent: oklch(0.65 0.15 180);
-      --accent-foreground: oklch(0.15 0.05 180);
-      --destructive: oklch(0.55 0.22 25);
-      --border: oklch(0.90 0.02 270);
-      --input: oklch(0.95 0.01 270);
-      --ring: oklch(0.45 0.18 270);
-      --radius: 1rem;
-    `,
-    dark: `
-      --background: oklch(0.12 0.01 270);
-      --foreground: oklch(0.92 0.02 270);
-      --card: oklch(0.18 0.01 270);
-      --card-foreground: oklch(0.92 0.02 270);
-      --primary: oklch(0.72 0.18 270);
-      --primary-foreground: oklch(0.12 0.01 270);
-      --secondary: oklch(0.32 0.03 270);
-      --secondary-foreground: oklch(0.90 0.02 270);
-      --muted: oklch(0.25 0.01 270);
-      --muted-foreground: oklch(0.70 0.02 270);
-      --accent: oklch(0.70 0.15 180);
-      --accent-foreground: oklch(0.15 0.05 180);
-      --destructive: oklch(0.72 0.22 25);
-      --border: oklch(0.25 0.02 270);
-      --input: oklch(0.20 0.01 270);
-      --ring: oklch(0.72 0.18 270);
-      --radius: 1rem;
-    `
+    name: 'Material 3',
+    description: 'Paleta verde ClearGrade, color personalizable',
+    preview: { primary: '#516435', secondary: '#99be64', accent: '#171d10' },
+    light: defaultGreen.light,
+    dark: defaultGreen.dark,
   },
   {
-    id: 'liquid-glass',
-    name: 'iOS Liquid Glass',
-    description: 'Blurs profundos, botones translucidos, esquinas 28px',
-    preview: { primary: '#007AFF', secondary: 'rgba(255,255,255,0.7)', accent: '#5AC8FA', background: '#F2F2F7' },
-    light: `
-      --background: oklch(0.96 0.005 240);
-      --foreground: oklch(0.10 0.01 240);
-      --card: oklch(1 0 0 / 0.72);
-      --card-foreground: oklch(0.10 0.01 240);
-      --primary: oklch(0.55 0.20 250);
-      --primary-foreground: oklch(1 0 0);
-      --secondary: oklch(0.95 0.01 240 / 0.8);
-      --secondary-foreground: oklch(0.30 0.05 240);
-      --muted: oklch(0.92 0.005 240 / 0.6);
-      --muted-foreground: oklch(0.50 0.02 240);
-      --accent: oklch(0.70 0.15 200);
-      --accent-foreground: oklch(0.15 0.05 200);
-      --destructive: oklch(0.60 0.25 25);
-      --border: oklch(0.88 0.01 240 / 0.5);
-      --input: oklch(0.96 0.005 240 / 0.8);
-      --ring: oklch(0.55 0.20 250);
-      --radius: 1.75rem;
-    `,
-    dark: `
-      --background: oklch(0.08 0.01 240);
-      --foreground: oklch(0.95 0.01 240);
-      --card: oklch(0.14 0.01 240 / 0.8);
-      --card-foreground: oklch(0.95 0.01 240);
-      --primary: oklch(0.65 0.20 250);
-      --primary-foreground: oklch(0.08 0.01 240);
-      --secondary: oklch(0.20 0.01 240 / 0.8);
-      --secondary-foreground: oklch(0.90 0.02 240);
-      --muted: oklch(0.18 0.01 240 / 0.6);
-      --muted-foreground: oklch(0.70 0.02 240);
-      --accent: oklch(0.70 0.15 200);
-      --accent-foreground: oklch(0.15 0.05 200);
-      --destructive: oklch(0.72 0.22 25);
-      --border: oklch(0.20 0.01 240 / 0.5);
-      --input: oklch(0.12 0.01 240 / 0.8);
-      --ring: oklch(0.65 0.20 250);
-      --radius: 1.75rem;
-    `
+    id: 'forest',
+    name: 'Forest',
+    description: 'Verdes profundos y tierra',
+    preview: { primary: '#2d5a27', secondary: '#a8d5a2', accent: '#8b4513' },
+    light: greenTokens(140, 0.38, 0.13).light,
+    dark:  greenTokens(140, 0.38, 0.13).dark,
   },
   {
-    id: 'zen',
-    name: 'Zen',
-    description: 'Sin divisiones, máximo espacio en blanco',
-    preview: { primary: '#2D3E2D', secondary: '#F5F5F0', accent: '#A8A89A', background: '#FEFEFE' },
-    light: `
-      --background: oklch(0.99 0 0);
-      --foreground: oklch(0.20 0.01 0);
-      --card: oklch(0.98 0 0);
-      --card-foreground: oklch(0.20 0.01 0);
-      --primary: oklch(0.35 0.05 140);
-      --primary-foreground: oklch(0.98 0 0);
-      --secondary: oklch(0.95 0.01 0);
-      --secondary-foreground: oklch(0.35 0.05 140);
-      --muted: oklch(0.90 0.005 0);
-      --muted-foreground: oklch(0.55 0.02 0);
-      --accent: oklch(0.65 0.05 70);
-      --accent-foreground: oklch(0.20 0.01 0);
-      --destructive: oklch(0.60 0.20 25);
-      --border: oklch(0.95 0.005 0);
-      --input: oklch(0.96 0.005 0);
-      --ring: oklch(0.35 0.05 140);
-      --radius: 0.5rem;
-    `,
-    dark: `
-      --background: oklch(0.10 0.01 0);
-      --foreground: oklch(0.92 0.005 0);
-      --card: oklch(0.15 0.01 0);
-      --card-foreground: oklch(0.92 0.005 0);
-      --primary: oklch(0.65 0.05 140);
-      --primary-foreground: oklch(0.10 0.01 0);
-      --secondary: oklch(0.25 0.01 0);
-      --secondary-foreground: oklch(0.90 0.005 0);
-      --muted: oklch(0.20 0.005 0);
-      --muted-foreground: oklch(0.70 0.02 0);
-      --accent: oklch(0.75 0.05 70);
-      --accent-foreground: oklch(0.10 0.01 0);
-      --destructive: oklch(0.70 0.20 25);
-      --border: oklch(0.22 0.005 0);
-      --input: oklch(0.12 0.005 0);
-      --ring: oklch(0.65 0.05 140);
-      --radius: 0.5rem;
-    `
+    id: 'ocean',
+    name: 'Ocean',
+    description: 'Azules oceánicos y profundos',
+    preview: { primary: '#0077b6', secondary: '#90e0ef', accent: '#023e8a' },
+    light: {
+      '--background':            'oklch(0.97 0.012 220)',
+      '--foreground':            'oklch(0.12 0.025 220)',
+      '--card':                  'oklch(1 0 0)',
+      '--card-foreground':       'oklch(0.12 0.025 220)',
+      '--popover':               'oklch(1 0 0)',
+      '--popover-foreground':    'oklch(0.12 0.025 220)',
+      '--primary':               'oklch(0.45 0.16 220)',
+      '--primary-foreground':    'oklch(0.98 0.005 220)',
+      '--secondary':             'oklch(0.88 0.06 220)',
+      '--secondary-foreground':  'oklch(0.25 0.10 220)',
+      '--muted':                 'oklch(0.93 0.03 220)',
+      '--muted-foreground':      'oklch(0.50 0.04 220)',
+      '--accent':                'oklch(0.70 0.14 200)',
+      '--accent-foreground':     'oklch(0.12 0.025 220)',
+      '--destructive':           'oklch(0.55 0.22 25)',
+      '--destructive-foreground':'oklch(0.98 0.01 25)',
+      '--border':                'oklch(0.86 0.05 220)',
+      '--input':                 'oklch(0.92 0.03 220)',
+      '--ring':                  'oklch(0.45 0.16 220)',
+      '--radius':                '1rem',
+    },
+    dark: {
+      '--background':            'oklch(0.09 0.02 220)',
+      '--foreground':            'oklch(0.93 0.02 220)',
+      '--card':                  'oklch(0.14 0.02 220)',
+      '--card-foreground':       'oklch(0.93 0.02 220)',
+      '--popover':               'oklch(0.14 0.02 220)',
+      '--popover-foreground':    'oklch(0.93 0.02 220)',
+      '--primary':               'oklch(0.68 0.16 220)',
+      '--primary-foreground':    'oklch(0.09 0.02 220)',
+      '--secondary':             'oklch(0.20 0.05 220)',
+      '--secondary-foreground':  'oklch(0.90 0.02 220)',
+      '--muted':                 'oklch(0.18 0.03 220)',
+      '--muted-foreground':      'oklch(0.65 0.04 220)',
+      '--accent':                'oklch(0.55 0.12 200)',
+      '--accent-foreground':     'oklch(0.93 0.02 220)',
+      '--destructive':           'oklch(0.65 0.22 25)',
+      '--destructive-foreground':'oklch(0.98 0.01 25)',
+      '--border':                'oklch(0.20 0.04 220)',
+      '--input':                 'oklch(0.16 0.03 220)',
+      '--ring':                  'oklch(0.68 0.16 220)',
+      '--radius':                '1rem',
+    },
   },
   {
-    id: 'miami',
-    name: 'Miami',
-    description: 'Gradientes vibrantes de rosa a azul cielo',
-    preview: { primary: '#FF1493', secondary: '#87CEEB', accent: '#FFD700', background: '#FFF8FA' },
-    light: `
-      --background: oklch(0.98 0.01 330);
-      --foreground: oklch(0.15 0.02 330);
-      --card: oklch(1 0 0);
-      --card-foreground: oklch(0.15 0.02 330);
-      --primary: oklch(0.60 0.25 330);
-      --primary-foreground: oklch(0.98 0 0);
-      --secondary: oklch(0.80 0.15 200);
-      --secondary-foreground: oklch(0.25 0.05 200);
-      --muted: oklch(0.94 0.01 330);
-      --muted-foreground: oklch(0.50 0.02 330);
-      --accent: oklch(0.75 0.20 60);
-      --accent-foreground: oklch(0.15 0.05 60);
-      --destructive: oklch(0.55 0.22 25);
-      --border: oklch(0.90 0.02 330);
-      --input: oklch(0.96 0.01 330);
-      --ring: oklch(0.60 0.25 330);
-      --radius: 1rem;
-    `,
-    dark: `
-      --background: oklch(0.12 0.01 330);
-      --foreground: oklch(0.92 0.02 330);
-      --card: oklch(0.18 0.01 330);
-      --card-foreground: oklch(0.92 0.02 330);
-      --primary: oklch(0.70 0.25 330);
-      --primary-foreground: oklch(0.12 0.01 330);
-      --secondary: oklch(0.50 0.15 200);
-      --secondary-foreground: oklch(0.90 0.02 200);
-      --muted: oklch(0.25 0.01 330);
-      --muted-foreground: oklch(0.70 0.02 330);
-      --accent: oklch(0.80 0.20 60);
-      --accent-foreground: oklch(0.12 0.01 60);
-      --destructive: oklch(0.72 0.22 25);
-      --border: oklch(0.25 0.02 330);
-      --input: oklch(0.20 0.01 330);
-      --ring: oklch(0.70 0.25 330);
-      --radius: 1rem;
-    `
+    id: 'rose',
+    name: 'Rose',
+    description: 'Tonos rosados y cálidos',
+    preview: { primary: '#be185d', secondary: '#fce7f3', accent: '#9d174d' },
+    light: {
+      '--background':            'oklch(0.98 0.010 350)',
+      '--foreground':            'oklch(0.13 0.025 350)',
+      '--card':                  'oklch(1 0 0)',
+      '--card-foreground':       'oklch(0.13 0.025 350)',
+      '--popover':               'oklch(1 0 0)',
+      '--popover-foreground':    'oklch(0.13 0.025 350)',
+      '--primary':               'oklch(0.48 0.20 350)',
+      '--primary-foreground':    'oklch(0.98 0.005 350)',
+      '--secondary':             'oklch(0.92 0.05 350)',
+      '--secondary-foreground':  'oklch(0.28 0.08 350)',
+      '--muted':                 'oklch(0.95 0.02 350)',
+      '--muted-foreground':      'oklch(0.52 0.05 350)',
+      '--accent':                'oklch(0.75 0.15 330)',
+      '--accent-foreground':     'oklch(0.13 0.025 350)',
+      '--destructive':           'oklch(0.55 0.22 25)',
+      '--destructive-foreground':'oklch(0.98 0.01 25)',
+      '--border':                'oklch(0.90 0.04 350)',
+      '--input':                 'oklch(0.95 0.02 350)',
+      '--ring':                  'oklch(0.48 0.20 350)',
+      '--radius':                '1.25rem',
+    },
+    dark: {
+      '--background':            'oklch(0.10 0.02 350)',
+      '--foreground':            'oklch(0.94 0.02 350)',
+      '--card':                  'oklch(0.15 0.02 350)',
+      '--card-foreground':       'oklch(0.94 0.02 350)',
+      '--popover':               'oklch(0.15 0.02 350)',
+      '--popover-foreground':    'oklch(0.94 0.02 350)',
+      '--primary':               'oklch(0.72 0.20 350)',
+      '--primary-foreground':    'oklch(0.10 0.02 350)',
+      '--secondary':             'oklch(0.22 0.05 350)',
+      '--secondary-foreground':  'oklch(0.90 0.02 350)',
+      '--muted':                 'oklch(0.20 0.03 350)',
+      '--muted-foreground':      'oklch(0.66 0.05 350)',
+      '--accent':                'oklch(0.58 0.15 330)',
+      '--accent-foreground':     'oklch(0.94 0.02 350)',
+      '--destructive':           'oklch(0.65 0.22 25)',
+      '--destructive-foreground':'oklch(0.98 0.01 25)',
+      '--border':                'oklch(0.22 0.04 350)',
+      '--input':                 'oklch(0.18 0.03 350)',
+      '--ring':                  'oklch(0.72 0.20 350)',
+      '--radius':                '1.25rem',
+    },
   },
   {
-    id: 'steel',
-    name: 'Steel',
-    description: 'Look industrial, bordes marcados, fuentes mono',
-    preview: { primary: '#34495E', secondary: '#ECF0F1', accent: '#E74C3C', background: '#FAFAFA' },
-    light: `
-      --background: oklch(0.98 0.005 0);
-      --foreground: oklch(0.20 0.01 210);
-      --card: oklch(0.96 0.005 0);
-      --card-foreground: oklch(0.20 0.01 210);
-      --primary: oklch(0.40 0.12 210);
-      --primary-foreground: oklch(0.98 0 0);
-      --secondary: oklch(0.92 0.005 0);
-      --secondary-foreground: oklch(0.35 0.10 210);
-      --muted: oklch(0.88 0.005 0);
-      --muted-foreground: oklch(0.50 0.02 210);
-      --accent: oklch(0.55 0.20 25);
-      --accent-foreground: oklch(0.98 0 0);
-      --destructive: oklch(0.55 0.22 25);
-      --border: oklch(0.85 0.01 210);
-      --input: oklch(0.94 0.005 0);
-      --ring: oklch(0.40 0.12 210);
-      --radius: 0.375rem;
-    `,
-    dark: `
-      --background: oklch(0.15 0.01 210);
-      --foreground: oklch(0.90 0.01 0);
-      --card: oklch(0.22 0.01 210);
-      --card-foreground: oklch(0.90 0.01 0);
-      --primary: oklch(0.65 0.12 210);
-      --primary-foreground: oklch(0.15 0.01 210);
-      --secondary: oklch(0.32 0.01 0);
-      --secondary-foreground: oklch(0.88 0.01 0);
-      --muted: oklch(0.28 0.01 210);
-      --muted-foreground: oklch(0.70 0.02 210);
-      --accent: oklch(0.70 0.20 25);
-      --accent-foreground: oklch(0.15 0.01 210);
-      --destructive: oklch(0.72 0.22 25);
-      --border: oklch(0.28 0.01 210);
-      --input: oklch(0.20 0.01 210);
-      --ring: oklch(0.65 0.12 210);
-      --radius: 0.375rem;
-    `
+    id: 'slate',
+    name: 'Slate',
+    description: 'Gris neutro y profesional',
+    preview: { primary: '#475569', secondary: '#e2e8f0', accent: '#0f172a' },
+    light: {
+      '--background':            'oklch(0.98 0.004 240)',
+      '--foreground':            'oklch(0.14 0.015 240)',
+      '--card':                  'oklch(1 0 0)',
+      '--card-foreground':       'oklch(0.14 0.015 240)',
+      '--popover':               'oklch(1 0 0)',
+      '--popover-foreground':    'oklch(0.14 0.015 240)',
+      '--primary':               'oklch(0.42 0.07 240)',
+      '--primary-foreground':    'oklch(0.98 0.005 240)',
+      '--secondary':             'oklch(0.92 0.02 240)',
+      '--secondary-foreground':  'oklch(0.28 0.04 240)',
+      '--muted':                 'oklch(0.95 0.01 240)',
+      '--muted-foreground':      'oklch(0.52 0.03 240)',
+      '--accent':                'oklch(0.65 0.06 240)',
+      '--accent-foreground':     'oklch(0.14 0.015 240)',
+      '--destructive':           'oklch(0.55 0.22 25)',
+      '--destructive-foreground':'oklch(0.98 0.01 25)',
+      '--border':                'oklch(0.88 0.02 240)',
+      '--input':                 'oklch(0.93 0.01 240)',
+      '--ring':                  'oklch(0.42 0.07 240)',
+      '--radius':                '0.5rem',
+    },
+    dark: {
+      '--background':            'oklch(0.11 0.01 240)',
+      '--foreground':            'oklch(0.93 0.01 240)',
+      '--card':                  'oklch(0.16 0.01 240)',
+      '--card-foreground':       'oklch(0.93 0.01 240)',
+      '--popover':               'oklch(0.16 0.01 240)',
+      '--popover-foreground':    'oklch(0.93 0.01 240)',
+      '--primary':               'oklch(0.65 0.07 240)',
+      '--primary-foreground':    'oklch(0.11 0.01 240)',
+      '--secondary':             'oklch(0.22 0.02 240)',
+      '--secondary-foreground':  'oklch(0.90 0.01 240)',
+      '--muted':                 'oklch(0.20 0.01 240)',
+      '--muted-foreground':      'oklch(0.64 0.03 240)',
+      '--accent':                'oklch(0.45 0.05 240)',
+      '--accent-foreground':     'oklch(0.93 0.01 240)',
+      '--destructive':           'oklch(0.65 0.22 25)',
+      '--destructive-foreground':'oklch(0.98 0.01 25)',
+      '--border':                'oklch(0.22 0.01 240)',
+      '--input':                 'oklch(0.18 0.01 240)',
+      '--ring':                  'oklch(0.65 0.07 240)',
+      '--radius':                '0.5rem',
+    },
   },
   {
-    id: 'bauhaus',
-    name: 'Bauhaus',
-    description: 'Formas geometricas y colores primarios saturados',
-    preview: { primary: '#E63946', secondary: '#FFB703', accent: '#1D3557', background: '#F8F9FA' },
-    light: `
-      --background: oklch(0.97 0.005 0);
-      --foreground: oklch(0.15 0.02 230);
-      --card: oklch(1 0 0);
-      --card-foreground: oklch(0.15 0.02 230);
-      --primary: oklch(0.60 0.22 25);
-      --primary-foreground: oklch(0.98 0 0);
-      --secondary: oklch(0.75 0.20 60);
-      --secondary-foreground: oklch(0.20 0.05 60);
-      --muted: oklch(0.92 0.01 230);
-      --muted-foreground: oklch(0.45 0.02 230);
-      --accent: oklch(0.35 0.15 230);
-      --accent-foreground: oklch(0.98 0 0);
-      --destructive: oklch(0.55 0.22 25);
-      --border: oklch(0.88 0.02 230);
-      --input: oklch(0.95 0.01 230);
-      --ring: oklch(0.60 0.22 25);
-      --radius: 0rem;
-    `,
-    dark: `
-      --background: oklch(0.12 0.01 230);
-      --foreground: oklch(0.92 0.02 230);
-      --card: oklch(0.20 0.01 230);
-      --card-foreground: oklch(0.92 0.02 230);
-      --primary: oklch(0.70 0.22 25);
-      --primary-foreground: oklch(0.12 0.01 230);
-      --secondary: oklch(0.65 0.20 60);
-      --secondary-foreground: oklch(0.15 0.05 60);
-      --muted: oklch(0.25 0.01 230);
-      --muted-foreground: oklch(0.70 0.02 230);
-      --accent: oklch(0.65 0.15 230);
-      --accent-foreground: oklch(0.12 0.01 230);
-      --destructive: oklch(0.72 0.22 25);
-      --border: oklch(0.25 0.02 230);
-      --input: oklch(0.18 0.01 230);
-      --ring: oklch(0.70 0.22 25);
-      --radius: 0rem;
-    `
+    id: 'amber',
+    name: 'Amber',
+    description: 'Dorado cálido y energético',
+    preview: { primary: '#d97706', secondary: '#fef3c7', accent: '#92400e' },
+    light: {
+      '--background':            'oklch(0.98 0.014 80)',
+      '--foreground':            'oklch(0.13 0.028 80)',
+      '--card':                  'oklch(1 0 0)',
+      '--card-foreground':       'oklch(0.13 0.028 80)',
+      '--popover':               'oklch(1 0 0)',
+      '--popover-foreground':    'oklch(0.13 0.028 80)',
+      '--primary':               'oklch(0.55 0.18 80)',
+      '--primary-foreground':    'oklch(0.98 0.005 80)',
+      '--secondary':             'oklch(0.92 0.06 80)',
+      '--secondary-foreground':  'oklch(0.28 0.08 80)',
+      '--muted':                 'oklch(0.95 0.02 80)',
+      '--muted-foreground':      'oklch(0.52 0.05 80)',
+      '--accent':                'oklch(0.70 0.16 70)',
+      '--accent-foreground':     'oklch(0.13 0.028 80)',
+      '--destructive':           'oklch(0.55 0.22 25)',
+      '--destructive-foreground':'oklch(0.98 0.01 25)',
+      '--border':                'oklch(0.88 0.05 80)',
+      '--input':                 'oklch(0.93 0.03 80)',
+      '--ring':                  'oklch(0.55 0.18 80)',
+      '--radius':                '0.875rem',
+    },
+    dark: {
+      '--background':            'oklch(0.10 0.02 80)',
+      '--foreground':            'oklch(0.94 0.02 80)',
+      '--card':                  'oklch(0.15 0.02 80)',
+      '--card-foreground':       'oklch(0.94 0.02 80)',
+      '--popover':               'oklch(0.15 0.02 80)',
+      '--popover-foreground':    'oklch(0.94 0.02 80)',
+      '--primary':               'oklch(0.75 0.18 80)',
+      '--primary-foreground':    'oklch(0.10 0.02 80)',
+      '--secondary':             'oklch(0.22 0.05 80)',
+      '--secondary-foreground':  'oklch(0.90 0.02 80)',
+      '--muted':                 'oklch(0.20 0.03 80)',
+      '--muted-foreground':      'oklch(0.66 0.05 80)',
+      '--accent':                'oklch(0.60 0.14 70)',
+      '--accent-foreground':     'oklch(0.94 0.02 80)',
+      '--destructive':           'oklch(0.65 0.22 25)',
+      '--destructive-foreground':'oklch(0.98 0.01 25)',
+      '--border':                'oklch(0.22 0.04 80)',
+      '--input':                 'oklch(0.18 0.03 80)',
+      '--ring':                  'oklch(0.75 0.18 80)',
+      '--radius':                '0.875rem',
+    },
   },
-  {
-    id: 'glassmorphism',
-    name: 'Glassmorphism',
-    description: 'Tarjetas flotantes con sombra suave',
-    preview: { primary: '#5E5CE6', secondary: '#C7C7CC', accent: '#9055FF', background: '#F5F5F7' },
-    light: `
-      --background: oklch(0.97 0.005 0);
-      --foreground: oklch(0.20 0.01 260);
-      --card: oklch(0.98 0.002 260 / 0.75);
-      --card-foreground: oklch(0.20 0.01 260);
-      --primary: oklch(0.50 0.20 260);
-      --primary-foreground: oklch(0.98 0 0);
-      --secondary: oklch(0.88 0.01 0);
-      --secondary-foreground: oklch(0.30 0.02 260);
-      --muted: oklch(0.92 0.005 260);
-      --muted-foreground: oklch(0.50 0.02 260);
-      --accent: oklch(0.62 0.18 270);
-      --accent-foreground: oklch(0.98 0 0);
-      --destructive: oklch(0.55 0.22 25);
-      --border: oklch(0.90 0.01 260 / 0.5);
-      --input: oklch(0.96 0.005 260);
-      --ring: oklch(0.50 0.20 260);
-      --radius: 1.5rem;
-    `,
-    dark: `
-      --background: oklch(0.12 0.01 260);
-      --foreground: oklch(0.92 0.02 260);
-      --card: oklch(0.18 0.01 260 / 0.8);
-      --card-foreground: oklch(0.92 0.02 260);
-      --primary: oklch(0.70 0.20 260);
-      --primary-foreground: oklch(0.12 0.01 260);
-      --secondary: oklch(0.28 0.01 0);
-      --secondary-foreground: oklch(0.90 0.02 260);
-      --muted: oklch(0.25 0.01 260);
-      --muted-foreground: oklch(0.70 0.02 260);
-      --accent: oklch(0.75 0.18 270);
-      --accent-foreground: oklch(0.12 0.01 270);
-      --destructive: oklch(0.72 0.22 25);
-      --border: oklch(0.25 0.01 260 / 0.5);
-      --input: oklch(0.20 0.01 260);
-      --ring: oklch(0.70 0.20 260);
-      --radius: 1.5rem;
-    `
-  }
 ]
 
-export function getThemeById(id: string) {
+export function getThemeById(id: string): Theme | undefined {
   return themes.find((t) => t.id === id)
 }
 
-export function getDefaultTheme() {
-  return themes[0] // Returns Material 3 Expressive as default
+export function getDefaultTheme(): Theme {
+  return themes[0]
 }

@@ -7,26 +7,23 @@ import { Check, Palette, Lock, RotateCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function SettingsPage() {
-  const { theme, setTheme, darkMode, setDarkMode, themes, customPrimaryColor, setCustomPrimaryColor } = useTheme()
+  const { theme, setTheme, darkMode, setDarkMode, themes, customColor: activeCustomColor, setCustomColor: applyCustomColor } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<'appearance' | 'security'>('appearance')
-  const [customColor, setCustomColor] = useState('')
-  const [pendingChanges, setPendingChanges] = useState(false)
+  const [pickerColor, setPickerColor] = useState('#516435')
 
-  // Check if custom colors are available (only for Material theme)
   const isMaterialTheme = theme.id === 'm3e'
 
   useEffect(() => {
     setMounted(true)
     const saved = localStorage.getItem('cleargrade-custom-color')
-    if (saved) setCustomColor(saved)
+    if (saved) setPickerColor(saved)
   }, [])
 
   if (!mounted) return null
 
   const handleThemeChange = (themeId: string) => {
     setTheme(themeId)
-    setPendingChanges(false)
   }
 
   const handleDarkModeChange = (mode: 'light' | 'dark' | 'auto') => {
@@ -34,20 +31,12 @@ export default function SettingsPage() {
   }
 
   const handleColorChange = (color: string) => {
-    setCustomColor(color)
-    setPendingChanges(true)
+    setPickerColor(color)
   }
 
   const applyChanges = () => {
-    // Custom colors only work for Material 3 Expressive
-    if (!isMaterialTheme) {
-      setPendingChanges(false)
-      return
-    }
-    localStorage.setItem('cleargrade-custom-color', customColor || '#00D418')
-    localStorage.setItem('cleargrade-use-custom-color', 'true')
-    setCustomPrimaryColor(customColor || '#00D418')
-    setPendingChanges(false)
+    if (!isMaterialTheme) return
+    applyCustomColor(pickerColor)
   }
 
   return (
@@ -194,7 +183,7 @@ export default function SettingsPage() {
                 <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-border">
                   <input
                     type="color"
-                    value={customColor || '#00D418'}
+                    value={pickerColor}
                     onChange={(e) => handleColorChange(e.target.value)}
                     className="w-full h-full cursor-pointer"
                     disabled={!isMaterialTheme}
@@ -203,7 +192,7 @@ export default function SettingsPage() {
                 <div className="space-y-3 flex-1">
                   <Button
                     onClick={applyChanges}
-                    disabled={!pendingChanges || !isMaterialTheme}
+                    disabled={!isMaterialTheme}
                     className="gap-2"
                   >
                     <RotateCw className="w-4 h-4" />
@@ -224,21 +213,20 @@ export default function SettingsPage() {
                   <p className="text-sm font-medium text-foreground">Colores Rápidos</p>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
                     {[
-                      '#00D418', '#FF6B6B', '#4ECDC4', '#45B7D1',
-                      '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE',
-                      '#85C1E2', '#F8B88B', '#A8E6CF', '#FFD3B6'
+                      '#516435', '#99be64', '#090c04', '#171d10',
+                      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
+                      '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B88B'
                     ].map((color) => (
                       <button
                         key={color}
                         onClick={() => {
-                          setCustomColor(color)
-                          setCustomPrimaryColor(color)
-                          setPendingChanges(false)
+                          setPickerColor(color)
+                          applyCustomColor(color)
                         }}
                         type="button"
                         className={cn(
                           'w-10 h-10 rounded-full border-2 transition-all flex-shrink-0',
-                          customColor === color ? 'border-primary scale-110' : 'border-border hover:border-primary'
+                          activeCustomColor === color ? 'border-primary scale-110' : 'border-border hover:border-primary'
                         )}
                         style={{ background: color }}
                         title={color}
