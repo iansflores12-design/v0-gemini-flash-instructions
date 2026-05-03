@@ -231,11 +231,15 @@ export default function SettingsPage() {
                       <button
                         key={color}
                         onClick={() => {
-                          handleColorChange(color)
-                          setTimeout(() => applyChanges(), 100)
+                          setCustomColor(color)
+                          setCustomPrimaryColor(color)
+                          setPendingChanges(false)
                         }}
                         type="button"
-                        className="w-10 h-10 rounded-full border-2 border-border hover:border-primary transition-all flex-shrink-0"
+                        className={cn(
+                          'w-10 h-10 rounded-full border-2 transition-all flex-shrink-0',
+                          customColor === color ? 'border-primary scale-110' : 'border-border hover:border-primary'
+                        )}
                         style={{ background: color }}
                         title={color}
                       />
