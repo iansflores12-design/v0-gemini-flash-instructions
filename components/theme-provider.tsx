@@ -189,16 +189,27 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       applyTheme(newTheme)
       localStorage.setItem('cleargrade-theme', themeId)
       
-      // Re-apply custom color if enabled
-      const useCustom = localStorage.getItem('cleargrade-use-custom-color')
-      const savedCustomColor = localStorage.getItem('cleargrade-custom-color')
-      if (useCustom === 'true' && savedCustomColor) {
-        applyCustomColor(savedCustomColor)
+      // Re-apply custom color ONLY for Material 3 Expressive theme
+      if (themeId === 'm3e') {
+        const useCustom = localStorage.getItem('cleargrade-use-custom-color')
+        const savedCustomColor = localStorage.getItem('cleargrade-custom-color')
+        if (useCustom === 'true' && savedCustomColor) {
+          applyCustomColor(savedCustomColor)
+        }
+      } else {
+        // For other themes (like iOS), remove custom color flag
+        localStorage.removeItem('cleargrade-use-custom-color')
+        setCustomPrimaryColorState(null)
       }
     }
   }
 
   const setCustomPrimaryColor = (color: string | null) => {
+    // Custom colors ONLY work for Material 3 Expressive theme
+    if (theme.id !== 'm3e') {
+      return // Ignore custom colors for other themes
+    }
+    
     setCustomPrimaryColorState(color)
     if (color) {
       applyCustomColor(color)

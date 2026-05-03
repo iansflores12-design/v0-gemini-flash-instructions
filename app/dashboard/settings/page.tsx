@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { SettingsPanel } from '@/components/settings-panel'
 
 export default function SettingsPage() {
-  const { theme, setTheme, darkMode, setDarkMode } = useTheme()
+  const { theme, setTheme, darkMode, setDarkMode, setCustomPrimaryColor } = useTheme()
   const [customColor, setCustomColor] = useState('')
   const [pendingChanges, setPendingChanges] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -19,6 +19,9 @@ export default function SettingsPage() {
   const [currentY, setCurrentY] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+
+  // Check if custom colors are available (only for Material theme)
+  const isMaterialTheme = theme.id === 'm3e'
 
   useEffect(() => {
     setMounted(true)
@@ -66,9 +69,16 @@ export default function SettingsPage() {
   }
 
   const applyChanges = () => {
+    // Custom colors only work for Material 3 Expressive
+    if (!isMaterialTheme) {
+      setPendingChanges(false)
+      return
+    }
     localStorage.setItem('cleargrade-custom-color', customColor || '#00D418')
     localStorage.setItem('cleargrade-use-custom-color', 'true')
-    setTimeout(() => window.location.reload(), 200)
+    // Apply without reload - use the context directly
+    setCustomPrimaryColor(customColor || '#00D418')
+    setPendingChanges(false)
   }
 
   if (!mounted) return null
@@ -219,39 +229,59 @@ export default function SettingsPage() {
                 )}
               </section>
 
-              {/* Custom Color */}
+              {/* Custom Color - Only for Material 3 Expressive */}
               <section className="space-y-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-foreground mb-2">Color Personalizado</h2>
-                  <p className="text-sm text-muted-foreground mb-4">Elige un color para toda la app</p>
+                  <h2 className="text-xl font-semibold text-foreground mb-2 flex items-center gap-2">
+                    Color Personalizado
+                    {!isMaterialTheme && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground font-normal">
+                        Solo Material
+                      </span>
+                    )}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {isMaterialTheme 
+                      ? 'Elige un color para toda la app (estilo Monet/Android 12+)'
+                      : 'Los colores personalizados solo estan disponibles en el tema Material 3 Expressive'
+                    }
+                  </p>
                 </div>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className={cn(
+                  "flex flex-col sm:flex-row items-start sm:items-center gap-4",
+                  !isMaterialTheme && "opacity-50 pointer-events-none"
+                )}>
                   <input
                     type="color"
                     value={customColor || '#00D418'}
                     onChange={(e) => handleColorChange(e.target.value)}
                     className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg cursor-pointer border-2 border-border"
+                    disabled={!isMaterialTheme}
                   />
                   <div className="space-y-2 flex-1">
                     <Button
                       onClick={applyChanges}
-                      disabled={!pendingChanges}
+                      disabled={!pendingChanges || !isMaterialTheme}
                       className="gap-2 w-full sm:w-auto"
                     >
                       <RotateCw className="w-4 h-4" />
                       Aplicar Color
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      El color se aplicará a toda la interfaz en el tema actual
+                      {isMaterialTheme 
+                        ? 'El color se aplicara a toda la interfaz'
+                        : 'Cambia al tema Material para usar colores custom'
+                      }
                     </p>
                   </div>
                 </div>
               </section>
 
-              {/* Presets */}
+              {/* Presets - Only for Material 3 Expressive */}
+              {isMaterialTheme && (
               <section className="space-y-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-foreground mb-2">Colores Rápidos</h2>
+                  <h2 className="text-xl font-semibold text-foreground mb-2">Colores Rapidos</h2>
                   <p className="text-sm text-muted-foreground mb-4">Colores populares para empezar</p>
                 </div>
                 <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
@@ -285,6 +315,7 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </section>
+              )}
             </div>
           )}
 
