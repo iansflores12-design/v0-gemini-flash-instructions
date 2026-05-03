@@ -7,7 +7,7 @@ import { Check, Palette, Lock, RotateCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function SettingsPage() {
-  const { theme, setTheme, darkMode, setDarkMode, themes, customPrimaryColor, setCustomPrimaryColor } = useTheme()
+  const { theme, setTheme, darkMode, setDarkMode, themes } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<'appearance' | 'security'>('appearance')
   const [customColor, setCustomColor] = useState('')
@@ -46,7 +46,7 @@ export default function SettingsPage() {
     }
     localStorage.setItem('cleargrade-custom-color', customColor || '#00D418')
     localStorage.setItem('cleargrade-use-custom-color', 'true')
-    setCustomPrimaryColor(customColor || '#00D418')
+    // Just save to localStorage - the theme will apply on page reload or theme change
     setPendingChanges(false)
   }
 
