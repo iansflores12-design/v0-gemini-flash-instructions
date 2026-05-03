@@ -23,12 +23,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [customPrimaryColor, setCustomPrimaryColorState] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
+  // All CSS variables used by themes
+  const cssVariables = [
+    '--background', '--foreground', '--card', '--card-foreground',
+    '--primary', '--primary-foreground', '--secondary', '--secondary-foreground',
+    '--muted', '--muted-foreground', '--accent', '--accent-foreground',
+    '--destructive', '--border', '--input', '--ring', '--radius'
+  ]
+
   // Apply theme CSS based on dark mode
   const applyTheme = (selectedTheme: Theme, mode: DarkMode, preserveCustomColor?: string | null) => {
     const root = document.documentElement
     const isDark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
     
-    // Apply CSS variables one by one to avoid overwriting other styles
+    // CLEAR all CSS variables first to prevent mixing
+    cssVariables.forEach(prop => root.style.removeProperty(prop))
+    
+    // Apply new CSS variables
     const css = isDark ? selectedTheme.dark : selectedTheme.light
     css.split(';').filter(s => s.trim()).forEach(declaration => {
       const [prop, ...rest] = declaration.split(':')
@@ -38,10 +49,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     })
     
     // Re-apply custom color if present (Material theme only)
-    const colorToPreserve = preserveCustomColor !== undefined ? preserveCustomColor : null
-    if (colorToPreserve && selectedTheme.id === 'm3e') {
-      root.style.setProperty('--primary', colorToPreserve)
-      root.style.setProperty('--ring', colorToPreserve)
+    if (preserveCustomColor && selectedTheme.id === 'm3e') {
+      root.style.setProperty('--primary', preserveCustomColor)
+      root.style.setProperty('--ring', preserveCustomColor)
     }
     
     // Add/remove dark class
