@@ -3,19 +3,52 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/components/theme-provider'
 import { Button } from '@/components/ui/button'
-import { Check, Palette, Lock, Sun, Moon, Smartphone } from 'lucide-react'
+import { Check, Palette, Lock, RotateCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function SettingsPage() {
-  const { theme, setTheme, darkMode, setDarkMode, themes } = useTheme()
+  const { theme, setTheme, darkMode, setDarkMode, themes, customPrimaryColor, setCustomPrimaryColor } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<'appearance' | 'security'>('appearance')
+  const [customColor, setCustomColor] = useState('')
+  const [pendingChanges, setPendingChanges] = useState(false)
+
+  // Check if custom colors are available (only for Material theme)
+  const isMaterialTheme = theme.id === 'm3e'
 
   useEffect(() => {
     setMounted(true)
+    const saved = localStorage.getItem('cleargrade-custom-color')
+    if (saved) setCustomColor(saved)
   }, [])
 
   if (!mounted) return null
+
+  const handleThemeChange = (themeId: string) => {
+    setTheme(themeId)
+    setPendingChanges(false)
+  }
+
+  const handleDarkModeChange = (mode: 'light' | 'dark' | 'auto') => {
+    setDarkMode(mode)
+  }
+
+  const handleColorChange = (color: string) => {
+    setCustomColor(color)
+    setPendingChanges(true)
+  }
+
+  const applyChanges = () => {
+    // Custom colors only work for Material 3 Expressive
+    if (!isMaterialTheme) {
+      setPendingChanges(false)
+      return
+    }
+    localStorage.setItem('cleargrade-custom-color', customColor || '#00D418')
+    localStorage.setItem('cleargrade-use-custom-color', 'true')
+    setCustomPrimaryColor(customColor || '#00D418')
+    setPendingChanges(false)
+  }
 
   return (
     <main className="min-h-screen bg-background">
@@ -60,155 +93,8 @@ export default function SettingsPage() {
             {/* Dark Mode Toggle */}
             <section className="space-y-4">
               <div>
-                <h2 className="text-2xl font-semibold text-foreground mb-2">Modo Oscuro</h2>
-                <p className="text-sm text-muted-foreground mb-4">Elige cómo prefieres ver la app</p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => setDarkMode('light')}
-                  className={cn(
-                    'px-4 py-3 rounded-lg border-2 transition-all font-medium flex items-center justify-center gap-2',
-                    darkMode === 'light'
-                      ? 'border-primary bg-primary/10 text-foreground'
-                      : 'border-border hover:border-primary/50 text-muted-foreground'
-                  )}
-                >
-                  <Sun className="w-4 h-4" />
-                  Claro
-                </button>
-                <button
-                  onClick={() => setDarkMode('dark')}
-                  className={cn(
-                    'px-4 py-3 rounded-lg border-2 transition-all font-medium flex items-center justify-center gap-2',
-                    darkMode === 'dark'
-                      ? 'border-primary bg-primary/10 text-foreground'
-                      : 'border-border hover:border-primary/50 text-muted-foreground'
-                  )}
-                >
-                  <Moon className="w-4 h-4" />
-                  Oscuro
-                </button>
-                <button
-                  onClick={() => setDarkMode('auto')}
-                  className={cn(
-                    'px-4 py-3 rounded-lg border-2 transition-all font-medium flex items-center justify-center gap-2',
-                    darkMode === 'auto'
-                      ? 'border-primary bg-primary/10 text-foreground'
-                      : 'border-border hover:border-primary/50 text-muted-foreground'
-                  )}
-                >
-                  <Smartphone className="w-4 h-4" />
-                  Auto
-                </button>
-              </div>
-            </section>
-
-            {/* Themes */}
-            <section className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-semibold text-foreground mb-2">Tema</h2>
-                <p className="text-sm text-muted-foreground mb-4">Selecciona tu tema favorito</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {themes.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setTheme(t.id)}
-                    type="button"
-                    className={cn(
-                      'p-4 rounded-lg border-2 transition-all text-left',
-                      theme.id === t.id
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-primary/50'
-                    )}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold text-foreground">{t.name}</h3>
-                        <p className="text-xs text-muted-foreground">{t.description}</p>
-                      </div>
-                      {theme.id === t.id && <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />}
-                    </div>
-                    <div className="flex gap-2">
-                      {Object.values(t.preview).slice(0, 3).map((color, i) => (
-                        <div
-                          key={i}
-                          className="w-6 h-6 rounded flex-shrink-0"
-                          style={{ background: color }}
-                        />
-                      ))}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-          </div>
-        )}
-
-        {/* Security Tab - placeholder */}
-        {activeTab === 'security' && (
-          <div className="space-y-8">
-            <section className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-semibold text-foreground mb-2">Seguridad</h2>
-                <p className="text-sm text-muted-foreground mb-4">Gestiona tu seguridad y privacidad</p>
-              </div>
-              <div className="p-4 rounded-lg border border-border bg-secondary/30">
-                <p className="text-muted-foreground">Las opciones de seguridad aparecerán pronto</p>
-              </div>
-            </section>
-          </div>
-        )}
-      </div>
-    </main>
-  )
-}
-
-  return (
-    <main className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto p-4 sm:p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Configuración</h1>
-          <p className="text-muted-foreground">Personaliza tu experiencia en ClearGrade</p>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-8 border-b border-border">
-          <button
-            onClick={() => setActiveTab('appearance')}
-            className={cn(
-              'px-4 py-2 font-medium border-b-2 transition-colors',
-              activeTab === 'appearance'
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Palette className="w-4 h-4 inline mr-2" />
-            Apariencia
-          </button>
-          <button
-            onClick={() => setActiveTab('security')}
-            className={cn(
-              'px-4 py-2 font-medium border-b-2 transition-colors',
-              activeTab === 'security'
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Lock className="w-4 h-4 inline mr-2" />
-            Seguridad
-          </button>
-        </div>
-
-        {/* Content */}
-        {activeTab === 'appearance' && (
-          <div className="space-y-8">
-            {/* Dark Mode */}
-            <section className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-semibold text-foreground mb-2">Modo Oscuro</h2>
-                <p className="text-sm text-muted-foreground mb-4">Elige cómo prefieres ver la app</p>
+                <h2 className="text-2xl font-semibold text-foreground mb-2">Modo de Color</h2>
+                <p className="text-sm text-muted-foreground mb-6">Elige cómo prefieres ver la app</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {(['light', 'dark', 'auto'] as const).map((mode) => (
@@ -225,11 +111,15 @@ export default function SettingsPage() {
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-semibold text-foreground capitalize">{mode}</h3>
+                        <h3 className="font-semibold text-foreground">
+                          {mode === 'light' && '☀️ Claro'}
+                          {mode === 'dark' && '🌙 Oscuro'}
+                          {mode === 'auto' && '🔄 Automático'}
+                        </h3>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {mode === 'light' && 'Siempre claro'}
-                          {mode === 'dark' && 'Siempre oscuro'}
-                          {mode === 'auto' && 'Según el sistema'}
+                          {mode === 'light' && 'Siempre modo claro'}
+                          {mode === 'dark' && 'Siempre modo oscuro'}
+                          {mode === 'auto' && 'Según la preferencia del sistema'}
                         </p>
                       </div>
                       {darkMode === mode && <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />}
@@ -243,7 +133,7 @@ export default function SettingsPage() {
             <section className="space-y-4">
               <div>
                 <h2 className="text-2xl font-semibold text-foreground mb-2">Tema</h2>
-                <p className="text-sm text-muted-foreground mb-4">Selecciona tu tema favorito</p>
+                <p className="text-sm text-muted-foreground mb-4">Selecciona tu tema favorito (los colores se adaptan al modo claro/oscuro)</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {themes.map((t) => (
@@ -277,16 +167,6 @@ export default function SettingsPage() {
                   </button>
                 ))}
               </div>
-              {pendingChanges && (
-                <Button
-                  onClick={applyChanges}
-                  className="w-full gap-2"
-                  size="lg"
-                >
-                  <RotateCw className="w-4 h-4" />
-                  Aplicar Cambios
-                </Button>
-              )}
             </section>
 
             {/* Custom Color - Only for Material 3 Expressive */}
@@ -369,9 +249,12 @@ export default function SettingsPage() {
         {activeTab === 'security' && (
           <div className="space-y-8">
             <section className="space-y-4">
-              <h2 className="text-2xl font-semibold text-foreground mb-4">Seguridad</h2>
-              <div className="p-6 rounded-lg bg-secondary/50 border border-border">
-                <p className="text-muted-foreground">Las opciones de seguridad estarán disponibles próximamente.</p>
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground mb-2">Seguridad</h2>
+                <p className="text-sm text-muted-foreground mb-4">Gestiona tu seguridad y privacidad</p>
+              </div>
+              <div className="p-4 rounded-lg border border-border bg-secondary/30">
+                <p className="text-muted-foreground">Las opciones de seguridad aparecerán pronto</p>
               </div>
             </section>
           </div>
