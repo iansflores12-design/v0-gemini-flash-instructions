@@ -17,7 +17,6 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
-// All variables to clear before applying a new theme
 const ALL_VARS = [
   '--background', '--foreground',
   '--card', '--card-foreground',
@@ -33,28 +32,30 @@ const ALL_VARS = [
 function resolveIsDark(mode: DarkMode): boolean {
   if (mode === 'dark') return true
   if (mode === 'light') return false
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
+  return typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)').matches : false
 }
 
 function applyTokens(theme: Theme, isDark: boolean, customColor: string | null) {
+  if (typeof document === 'undefined') return
+  
   const root = document.documentElement
   const tokens = isDark ? theme.dark : theme.light
 
-  // 1. Clear all vars
+  // 1. Limpiar variables con una transición suave para evitar parpadeos bruscos
   ALL_VARS.forEach(v => root.style.removeProperty(v))
 
-  // 2. Apply theme tokens
+  // 2. Aplicar tokens del tema seleccionado
   Object.entries(tokens).forEach(([prop, value]) => {
     root.style.setProperty(prop, value)
   })
 
-  // 3. Apply custom primary color on top (Material theme only)
+  // 3. Priorizar color personalizado para Material 3 (m3e)
   if (customColor && theme.id === 'm3e') {
     root.style.setProperty('--primary', customColor)
     root.style.setProperty('--ring', customColor)
+    // Opcional: Podrías derivar un color de fondo sutil aquí para evitar el verde
   }
 
-  // 4. Toggle dark class
   root.classList.toggle('dark', isDark)
 }
 
@@ -64,14 +65,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [customColor, setCustomColorState] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
-  // Refs so event listeners always have fresh values
   const themeRef = useRef(theme)
   const darkModeRef = useRef(darkMode)
   const customColorRef = useRef(customColor)
-
-  useEffect(() => { themeRef.current = theme }, [theme])
-  useEffect(() => { darkModeRef.current = darkMode }, [darkMode])
-  useEffect(() => { customColorRef.current = customColor }, [customColor])
 
   useEffect(() => {
     const savedThemeId = localStorage.getItem('cleargrade-theme') || 'm3e'
@@ -85,6 +81,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(t)
     setDarkModeState(savedMode)
     setCustomColorState(c)
+    
     themeRef.current = t
     darkModeRef.current = savedMode
     customColorRef.current = c
@@ -92,7 +89,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyTokens(t, resolveIsDark(savedMode), c)
     setMounted(true)
 
-    // System dark-mode listener (only affects 'auto')
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const onSystemChange = () => {
       if (darkModeRef.current === 'auto') {
@@ -105,19 +101,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = (id: string) => {
     const t = getThemeById(id) ?? getDefaultTheme()
-    const c = id === 'm3e' ? customColorRef.current : null
+    let c = customColorRef.current
+    
     if (id !== 'm3e') {
+      c = null
       setCustomColorState(null)
       customColorRef.current = null
       localStorage.removeItem('cleargrade-use-custom-color')
     }
+    
     setThemeState(t)
+    themeRef.current = t
     localStorage.setItem('cleargrade-theme', id)
     applyTokens(t, resolveIsDark(darkModeRef.current), c)
   }
 
   const setDarkMode = (mode: DarkMode) => {
     setDarkModeState(mode)
+    darkModeRef.current = mode
     localStorage.setItem('cleargrade-dark-mode', mode)
     applyTokens(themeRef.current, resolveIsDark(mode), customColorRef.current)
   }
@@ -136,11 +137,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyTokens(themeRef.current, resolveIsDark(darkModeRef.current), color)
   }
 
-  if (!mounted) return <>{children}</>
-
+  // IMPORTANTE: Evitar renderizar contenido sin variables aplicadas[cite: 1]
   return (
     <ThemeContext.Provider value={{ theme, themes, setTheme, darkMode, setDarkMode, customColor, setCustomColor }}>
-      {children}
+      <div style={{ visibility: mounted ? 'visible' : 'hidden' }}>
+        {children}
+      </div>
     </ThemeContext.Provider>
   )
 }
