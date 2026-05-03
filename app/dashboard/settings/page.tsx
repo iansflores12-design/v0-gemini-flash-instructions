@@ -2,55 +2,167 @@
 
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/components/theme-provider'
-import { themes } from '@/lib/themes'
 import { Button } from '@/components/ui/button'
-import { Check, RotateCw, Palette, Lock } from 'lucide-react'
+import { Check, Palette, Lock, Sun, Moon, Smartphone } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function SettingsPage() {
-  const { theme, setTheme, darkMode, setDarkMode, setCustomPrimaryColor } = useTheme()
-  const [customColor, setCustomColor] = useState('')
-  const [pendingChanges, setPendingChanges] = useState(false)
+  const { theme, setTheme, darkMode, setDarkMode, themes } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<'appearance' | 'security'>('appearance')
 
-  // Check if custom colors are available (only for Material theme)
-  const isMaterialTheme = theme.id === 'm3e'
-
   useEffect(() => {
     setMounted(true)
-    const saved = localStorage.getItem('cleargrade-custom-color')
-    if (saved) setCustomColor(saved)
   }, [])
 
-  const handleDarkModeChange = (mode: 'light' | 'dark' | 'auto') => {
-    setDarkMode(mode)
-    localStorage.setItem('cleargrade-dark-mode', mode)
-  }
-
-  const handleThemeChange = (themeId: string) => {
-    setTheme(themeId)
-    localStorage.removeItem('cleargrade-use-custom-color')
-    setPendingChanges(true)
-  }
-
-  const handleColorChange = (color: string) => {
-    setCustomColor(color)
-    setPendingChanges(true)
-  }
-
-  const applyChanges = () => {
-    if (!isMaterialTheme) {
-      setPendingChanges(false)
-      return
-    }
-    localStorage.setItem('cleargrade-custom-color', customColor || '#00D418')
-    localStorage.setItem('cleargrade-use-custom-color', 'true')
-    setCustomPrimaryColor(customColor || '#00D418')
-    setPendingChanges(false)
-  }
-
   if (!mounted) return null
+
+  return (
+    <main className="min-h-screen bg-background">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Configuración</h1>
+          <p className="text-muted-foreground">Personaliza tu experiencia en ClearGrade</p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-8 border-b border-border">
+          <button
+            onClick={() => setActiveTab('appearance')}
+            className={cn(
+              'px-4 py-2 font-medium border-b-2 transition-colors',
+              activeTab === 'appearance'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Palette className="w-4 h-4 inline mr-2" />
+            Apariencia
+          </button>
+          <button
+            onClick={() => setActiveTab('security')}
+            className={cn(
+              'px-4 py-2 font-medium border-b-2 transition-colors',
+              activeTab === 'security'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Lock className="w-4 h-4 inline mr-2" />
+            Seguridad
+          </button>
+        </div>
+
+        {/* Content */}
+        {activeTab === 'appearance' && (
+          <div className="space-y-8">
+            {/* Dark Mode Toggle */}
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground mb-2">Modo Oscuro</h2>
+                <p className="text-sm text-muted-foreground mb-4">Elige cómo prefieres ver la app</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => setDarkMode('light')}
+                  className={cn(
+                    'px-4 py-3 rounded-lg border-2 transition-all font-medium flex items-center justify-center gap-2',
+                    darkMode === 'light'
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border hover:border-primary/50 text-muted-foreground'
+                  )}
+                >
+                  <Sun className="w-4 h-4" />
+                  Claro
+                </button>
+                <button
+                  onClick={() => setDarkMode('dark')}
+                  className={cn(
+                    'px-4 py-3 rounded-lg border-2 transition-all font-medium flex items-center justify-center gap-2',
+                    darkMode === 'dark'
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border hover:border-primary/50 text-muted-foreground'
+                  )}
+                >
+                  <Moon className="w-4 h-4" />
+                  Oscuro
+                </button>
+                <button
+                  onClick={() => setDarkMode('auto')}
+                  className={cn(
+                    'px-4 py-3 rounded-lg border-2 transition-all font-medium flex items-center justify-center gap-2',
+                    darkMode === 'auto'
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border hover:border-primary/50 text-muted-foreground'
+                  )}
+                >
+                  <Smartphone className="w-4 h-4" />
+                  Auto
+                </button>
+              </div>
+            </section>
+
+            {/* Themes */}
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground mb-2">Tema</h2>
+                <p className="text-sm text-muted-foreground mb-4">Selecciona tu tema favorito</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {themes.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setTheme(t.id)}
+                    type="button"
+                    className={cn(
+                      'p-4 rounded-lg border-2 transition-all text-left',
+                      theme.id === t.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    )}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="font-semibold text-foreground">{t.name}</h3>
+                        <p className="text-xs text-muted-foreground">{t.description}</p>
+                      </div>
+                      {theme.id === t.id && <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />}
+                    </div>
+                    <div className="flex gap-2">
+                      {Object.values(t.preview).slice(0, 3).map((color, i) => (
+                        <div
+                          key={i}
+                          className="w-6 h-6 rounded flex-shrink-0"
+                          style={{ background: color }}
+                        />
+                      ))}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* Security Tab - placeholder */}
+        {activeTab === 'security' && (
+          <div className="space-y-8">
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground mb-2">Seguridad</h2>
+                <p className="text-sm text-muted-foreground mb-4">Gestiona tu seguridad y privacidad</p>
+              </div>
+              <div className="p-4 rounded-lg border border-border bg-secondary/30">
+                <p className="text-muted-foreground">Las opciones de seguridad aparecerán pronto</p>
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
+    </main>
+  )
+}
 
   return (
     <main className="min-h-screen bg-background">
