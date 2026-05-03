@@ -1,6 +1,7 @@
-import { BookOpen, Mail, ExternalLink } from 'lucide-react'
+import { Mail, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { ClearGradeLogo } from '@/components/cleargrade-logo'
 
 export default function SignUpSuccessPage() {
   return (
@@ -8,8 +9,8 @@ export default function SignUpSuccessPage() {
       <div className="w-full max-w-sm text-center animate-slide-up">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center mb-4">
-            <Mail className="w-8 h-8 text-accent-foreground" />
+          <div className="mb-4">
+            <ClearGradeLogo size="md" />
           </div>
           <h1 className="text-2xl font-semibold text-foreground">Revisa tu correo</h1>
           <p className="text-muted-foreground mt-2 leading-relaxed">
@@ -19,7 +20,6 @@ export default function SignUpSuccessPage() {
 
         <div className="p-4 rounded-2xl bg-secondary/50 mb-6">
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <BookOpen className="w-4 h-4" />
             <span>ClearGrade</span>
           </div>
         </div>
