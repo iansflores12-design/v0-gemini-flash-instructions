@@ -191,13 +191,15 @@ export default function SettingsPage() {
                 "flex flex-col sm:flex-row items-start sm:items-center gap-6",
                 !isMaterialTheme && "opacity-50 pointer-events-none"
               )}>
-                <input
-                  type="color"
-                  value={customColor || '#00D418'}
-                  onChange={(e) => handleColorChange(e.target.value)}
-                  className="w-24 h-24 rounded-full cursor-pointer border-4 border-border"
-                  disabled={!isMaterialTheme}
-                />
+                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-border">
+                  <input
+                    type="color"
+                    value={customColor || '#00D418'}
+                    onChange={(e) => handleColorChange(e.target.value)}
+                    className="w-full h-full cursor-pointer"
+                    disabled={!isMaterialTheme}
+                  />
+                </div>
                 <div className="space-y-3 flex-1">
                   <Button
                     onClick={applyChanges}
