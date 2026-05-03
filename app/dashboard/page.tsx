@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getTasks, getSubjects } from '@/lib/actions'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { AgendaInput } from '@/components/agenda-input'
-import { TaskList } from '@/components/task-list'
+import { UpcomingTasks } from '@/components/upcoming-tasks'
 import { QuickStats } from '@/components/quick-stats'
 
 export default async function DashboardPage() {
@@ -39,7 +39,7 @@ export default async function DashboardPage() {
           <h2 className="text-lg font-semibold text-foreground mb-3">
             Proximas tareas
           </h2>
-          <TaskList tasks={pendingTasks.slice(0, 5)} showViewAll />
+          <UpcomingTasks tasks={pendingTasks} subjects={subjects} />
         </section>
       </div>
     </main>
