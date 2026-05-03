@@ -255,5 +255,23 @@ export default function SettingsPage() {
         )}
       </div>
     </main>
+import { X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+
+  export default function SettingsHeader() {
+  const router = useRouter()
+  return (
+    <div className="flex items-center justify-between p-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Configuración</h1>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="rounded-full hover:bg-black/5 dark:hover:bg-white/10"
+        onClick={() => router.back()}
+      >
+        <X className="h-5 w-5" />
+      </Button>
+    </div>
   )
 }
