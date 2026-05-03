@@ -49,7 +49,7 @@ export default function SignUpPage() {
     // Si el usuario acepta recibir marketing, guardar en tabla
     if (marketingOptIn && data.user) {
       try {
-        await supabase
+        const { error: insertError } = await supabase
           .from('marketing_subscribers')
           .insert({
             email: email,
@@ -58,9 +58,14 @@ export default function SignUpPage() {
             user_id: data.user.id,
             subscribed: true,
           })
+        
+        if (insertError) {
+          console.error('[v0] Marketing insert error:', insertError.message)
+        } else {
+          console.log('[v0] User saved to marketing_subscribers successfully')
+        }
       } catch (err) {
         console.error('[v0] Error saving to marketing_subscribers:', err)
-        // No es crítico si falla aquí, continuamos
       }
     }
 
