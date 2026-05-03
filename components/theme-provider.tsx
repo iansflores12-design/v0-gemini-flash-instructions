@@ -127,9 +127,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setCustomPrimaryColorState(color)
     
     if (color) {
-      // Simple: apply color directly as hex to primary and ring
-      document.documentElement.style.setProperty('--primary', color)
-      document.documentElement.style.setProperty('--ring', color)
+      const root = document.documentElement
+      
+      // Clear all colors first
+      cssVariables.forEach(prop => root.style.removeProperty(prop))
+      
+      // Re-apply the full theme
+      const isDark = darkMode === 'dark' || (darkMode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      const css = isDark ? theme.dark : theme.light
+      css.split(';').filter(s => s.trim()).forEach(declaration => {
+        const [prop, ...rest] = declaration.split(':')
+        if (prop && rest.length) {
+          root.style.setProperty(prop.trim(), rest.join(':').trim())
+        }
+      })
+      
+      // NOW apply only the custom primary color
+      root.style.setProperty('--primary', color)
+      root.style.setProperty('--ring', color)
+      
       localStorage.setItem('cleargrade-custom-color', color)
       localStorage.setItem('cleargrade-use-custom-color', 'true')
     } else {
