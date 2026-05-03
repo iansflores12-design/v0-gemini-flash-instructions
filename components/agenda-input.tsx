@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Sparkles, Loader2, Check, X, FileUp, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createTaskWithMaterials } from '@/lib/actions'
@@ -8,6 +8,48 @@ import type { Subject, ParsedAgendaItem } from '@/lib/types'
 
 interface AgendaInputProps {
   subjects: Subject[]
+}
+
+// Check if running on mobile
+const isMobile = () => {
+  if (typeof window === 'undefined') return false
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+}
+
+// Play success sound (web only)
+const playSuccessSound = () => {
+  if (typeof window === 'undefined') return
+  try {
+    const audio = new Audio('/sounds/success.mp3')
+    audio.volume = 0.5
+    audio.play().catch(() => {})
+  } catch {}
+}
+
+// Request notification permission
+const requestNotificationPermission = async () => {
+  if (typeof window === 'undefined' || !('Notification' in window)) return false
+  if (Notification.permission === 'granted') return true
+  if (Notification.permission === 'denied') return false
+  const permission = await Notification.requestPermission()
+  return permission === 'granted'
+}
+
+// Show notification (mobile)
+const showNotification = (title: string, body: string) => {
+  if (typeof window === 'undefined' || !('Notification' in window)) return
+  if (Notification.permission !== 'granted') return
+  
+  try {
+    new Notification(title, {
+      body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      vibrate: [200, 100, 200],
+      tag: 'agenda-processed',
+      renotify: true,
+    })
+  } catch {}
 }
 
 export function AgendaInput({ subjects }: AgendaInputProps) {
@@ -18,6 +60,13 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Request notification permission on mount (for mobile)
+  useEffect(() => {
+    if (isMobile()) {
+      requestNotificationPermission()
+    }
+  }, [])
 
   const handleFileSelect = (file: File) => {
     const fileName = file.name.toLowerCase()
@@ -83,6 +132,18 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
       
       if (!data.tasks || data.tasks.length === 0) {
         setError('No se encontraron tareas en el documento. Intenta con otro archivo.')
+      } else {
+        // Success feedback
+        if (isMobile()) {
+          // Mobile: show notification
+          showNotification(
+            'Agenda procesada',
+            `Se encontraron ${data.tasks.length} tareas. Toca para revisar.`
+          )
+        } else {
+          // Web: play sound
+          playSuccessSound()
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
