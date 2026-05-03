@@ -46,7 +46,6 @@ export default function SettingsPage() {
     }
     localStorage.setItem('cleargrade-custom-color', customColor || '#00D418')
     localStorage.setItem('cleargrade-use-custom-color', 'true')
-    setCustomPrimaryColor(customColor || '#00D418')
     setPendingChanges(false)
   }
 
