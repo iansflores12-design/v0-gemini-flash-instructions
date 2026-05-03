@@ -48,6 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.classList.toggle('dark', isDark)
   }
 
+  // Initialize theme on mount
   useEffect(() => {
     setMounted(true)
     const savedThemeId = localStorage.getItem('cleargrade-theme') || 'm3e'
@@ -82,6 +83,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => mq.removeEventListener('change', handleSystemChange)
   }, [])
 
+  // Effect to re-apply theme when darkMode changes
+  useEffect(() => {
+    if (!mounted) return
+    applyTheme(theme, darkMode, customPrimaryColor)
+  }, [darkMode])
+
   const setTheme = (themeId: string) => {
     const newTheme = getThemeById(themeId)
     if (newTheme) {
@@ -100,8 +107,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setDarkMode = (mode: DarkMode) => {
     setDarkModeState(mode)
     localStorage.setItem('cleargrade-dark-mode', mode)
-    // Preserve custom color when changing dark mode
-    applyTheme(theme, mode, customPrimaryColor)
+    // Use the current state to get fresh theme data
+    const currentTheme = theme // Get latest theme
+    applyTheme(currentTheme, mode, customPrimaryColor)
   }
 
   const setCustomPrimaryColor = (color: string | null) => {
