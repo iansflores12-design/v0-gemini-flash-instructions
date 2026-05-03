@@ -3,14 +3,17 @@
 import { useState, useMemo } from 'react'
 import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, addWeeks, differenceInDays, isPast, isToday, isTomorrow } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Check, ChevronRight, Package, Trash2, Loader2, Calendar, ExternalLink, Clock, Star, X, MessageCircle } from 'lucide-react'
+import { Check, ChevronRight, Trash2, Loader2, Calendar, Star, X, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { toggleTaskDone, deleteTask } from '@/lib/actions'
-import type { Task } from '@/lib/types'
-import { parseTaskValue, getTaskDescription, getTaskValue } from '@/lib/types'
+import { toggleTaskDone, deleteTask, updateTask, getSubjects } from '@/lib/actions'
+import type { Task, Subject } from '@/lib/types'
+import { getTaskDescription, getTaskValue } from '@/lib/types'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 
 interface TaskListProps {
   tasks: Task[]
+  subjects?: Subject[]
   showViewAll?: boolean
 }
 
@@ -23,7 +26,7 @@ interface WeekData {
   tasks: Task[]
 }
 
-export function TaskList({ tasks, showViewAll }: TaskListProps) {
+export function TaskList({ tasks, subjects = [], showViewAll }: TaskListProps) {
   const [selectedWeek, setSelectedWeek] = useState(0)
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
@@ -132,6 +135,7 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
               <TaskCard
                 key={task.id}
                 task={task}
+                subjects={subjects}
                 weekNumber={currentWeek?.weekNumber || 1}
                 isExpanded={expandedTaskId === task.id}
                 onToggleExpand={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
@@ -155,6 +159,7 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
               <TaskCard
                 key={task.id}
                 task={task}
+                subjects={subjects}
                 weekNumber={currentWeek?.weekNumber || 1}
                 isExpanded={expandedTaskId === task.id}
                 onToggleExpand={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
@@ -178,18 +183,26 @@ export function TaskList({ tasks, showViewAll }: TaskListProps) {
 }
 
 function TaskCard({ 
-  task, 
+  task,
+  subjects,
   weekNumber,
   isExpanded, 
   onToggleExpand 
 }: { 
   task: Task
+  subjects: Subject[]
   weekNumber: number
   isExpanded: boolean
   onToggleExpand: () => void
 }) {
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(task.title)
+  const [editDate, setEditDate] = useState(task.due_date)
+  const [editSubjectId, setEditSubjectId] = useState(task.subject_id || '')
+  const [editDescription, setEditDescription] = useState(getTaskDescription(task) || '')
+  const [saving, setSaving] = useState(false)
 
   const dueDate = parseISO(task.due_date)
   const isOverdue = isPast(dueDate) && !isToday(dueDate) && !task.is_done
@@ -219,6 +232,18 @@ function TaskCard({
       await deleteTask(task.id)
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editTitle.trim() || !editDate) return
+    setSaving(true)
+    try {
+      await updateTask(task.id, editTitle.trim(), editDate, editSubjectId || undefined, editDescription || undefined)
+      setIsEditing(false)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -317,13 +342,13 @@ function TaskCard({
         </div>
       </div>
 
-      {/* Expanded View - Full Detail Sheet */}
+      {/* Expanded View */}
       {isExpanded && (
         <div className="border-t border-border bg-background">
-          {/* Header with subject */}
+          {/* Header */}
           <div className="p-4 border-b border-border flex items-center gap-3">
-            <div 
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
               style={{ backgroundColor: `${subjectColor}20` }}
             >
               <span style={{ color: subjectColor }} className="font-bold text-sm">
@@ -337,122 +362,169 @@ function TaskCard({
               <p className="text-xs text-muted-foreground">{taskType}</p>
             </div>
             <button
-              onClick={onToggleExpand}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              onClick={(e) => { e.stopPropagation(); setIsEditing(!isEditing) }}
+              className={cn('p-2 rounded-lg transition-colors', isEditing ? 'bg-primary/10 text-primary' : 'hover:bg-secondary text-muted-foreground')}
             >
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button onClick={onToggleExpand} className="p-2 rounded-lg hover:bg-secondary transition-colors">
               <X className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
 
-          {/* Title */}
-          <div className="p-4">
-            <h3 className="text-lg font-bold text-foreground">{task.title}</h3>
-          </div>
-
-          {/* Date & Value */}
-          <div className="px-4 space-y-3">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-muted-foreground" />
-              <div>
-                <p className="text-xs text-muted-foreground">Fecha limite</p>
-                <p className={cn(
-                  'font-semibold',
-                  isOverdue ? 'text-destructive' : 'text-foreground'
-                )}>
-                  {format(dueDate, "EEEE d 'de' MMMM", { locale: es })}
-                </p>
-              </div>
-            </div>
-
-            {getTaskValue(task) && (
-              <div className="flex items-center gap-3">
-                <Star className="w-5 h-5 text-primary" />
+          {/* Edit Form */}
+          {isEditing ? (
+            <form onSubmit={handleSaveEdit} className="p-4 space-y-3">
+              <div className="space-y-3">
                 <div>
-                  <p className="text-xs text-muted-foreground">Valor</p>
-                  <p className="font-semibold text-primary">{getTaskValue(task)}</p>
+                  <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1 block">Titulo</label>
+                  <Input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="h-11 rounded-xl bg-secondary/30"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1 block">Fecha limite</label>
+                  <Input
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    className="h-11 rounded-xl bg-secondary/30"
+                    required
+                  />
+                </div>
+                {subjects.length > 0 && (
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1 block">Materia</label>
+                    <select
+                      value={editSubjectId}
+                      onChange={(e) => setEditSubjectId(e.target.value)}
+                      className="w-full h-11 rounded-xl bg-secondary/30 border border-input px-3 text-foreground text-sm"
+                    >
+                      <option value="">Sin materia</option>
+                      {subjects.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1 block">Descripcion</label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-xl bg-secondary/30 border border-input px-3 py-2 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Description */}
-          {getTaskDescription(task) && (
-            <div className="px-4 pt-4">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Descripcion</p>
-              <div className="p-3 rounded-xl bg-secondary/50">
-                <p className="text-sm text-foreground whitespace-pre-wrap">{getTaskDescription(task)}</p>
+              <div className="flex gap-2 pt-1">
+                <Button type="button" variant="outline" onClick={() => setIsEditing(false)} className="flex-1 rounded-xl">
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={saving} className="flex-1 rounded-xl">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Guardar cambios'}
+                </Button>
               </div>
-            </div>
-          )}
+            </form>
+          ) : (
+            <>
+              {/* Detail View */}
+              <div className="p-4">
+                <h3 className="text-lg font-bold text-foreground">{task.title}</h3>
+              </div>
 
-          {/* Materials */}
-          {task.materials && task.materials.length > 0 && (
-            <div className="px-4 pt-4">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Materiales necesarios</p>
-              <div className="space-y-2">
-                {task.materials.map((m, i) => (
-                  <div 
-                    key={i}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50"
-                  >
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: subjectColor }} />
-                    <span className="text-sm text-foreground">
-                      {m.quantity ? `${m.quantity} - ` : ''}{m.name}
-                    </span>
+              <div className="px-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-5 h-5 text-muted-foreground shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Fecha limite</p>
+                    <p className={cn('font-semibold', isOverdue ? 'text-destructive' : 'text-foreground')}>
+                      {format(dueDate, "EEEE d 'de' MMMM", { locale: es })}
+                    </p>
                   </div>
-                ))}
+                </div>
+                {getTaskValue(task) && (
+                  <div className="flex items-center gap-3">
+                    <Star className="w-5 h-5 text-primary shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Valor</p>
+                      <p className="font-semibold text-primary">{getTaskValue(task)}</p>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
 
-          {/* Action Buttons */}
-          <div className="p-4 space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={addToGoogleCalendar}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
-              >
-                <Calendar className="w-4 h-4" />
-                Google Calendar
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  // Copy to clipboard functionality
-                  const text = `${task.title}\nFecha: ${format(dueDate, "d MMM yyyy")}\n${task.description || ''}`
-                  navigator.clipboard.writeText(text)
-                }}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-green-500/10 text-green-600 font-medium hover:bg-green-500/20 transition-colors"
-              >
-                <Check className="w-4 h-4" />
-                Copiar p/ Tasks
-              </button>
-            </div>
-
-            <button
-              onClick={handleToggle}
-              disabled={loading}
-              className={cn(
-                'w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-colors',
-                task.is_done 
-                  ? 'bg-secondary text-foreground hover:bg-secondary/80'
-                  : 'bg-card border border-border text-foreground hover:bg-secondary'
+              {getTaskDescription(task) && (
+                <div className="px-4 pt-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Descripcion</p>
+                  <div className="p-3 rounded-xl bg-secondary/50">
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{getTaskDescription(task)}</p>
+                  </div>
+                </div>
               )}
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  {task.is_done ? (
-                    <X className="w-4 h-4" />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full border-2 border-current" />
+
+              {task.materials && task.materials.length > 0 && (
+                <div className="px-4 pt-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Materiales</p>
+                  <div className="space-y-2">
+                    {task.materials.map((m, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: subjectColor }} />
+                        <span className="text-sm text-foreground">
+                          {m.quantity ? `${m.quantity} - ` : ''}{m.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="p-4 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={addToGoogleCalendar}
+                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors text-sm"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Google Calendar
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const text = `${task.title}\nFecha: ${format(dueDate, "d MMM yyyy")}\n${task.description || ''}`
+                      navigator.clipboard.writeText(text)
+                    }}
+                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-secondary text-foreground font-medium hover:bg-secondary/80 transition-colors text-sm"
+                  >
+                    <Check className="w-4 h-4" />
+                    Copiar
+                  </button>
+                </div>
+                <button
+                  onClick={handleToggle}
+                  disabled={loading}
+                  className={cn(
+                    'w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-colors',
+                    task.is_done
+                      ? 'bg-secondary text-foreground hover:bg-secondary/80'
+                      : 'bg-card border border-border text-foreground hover:bg-secondary'
                   )}
-                  {task.is_done ? 'Desmarcar como hecha' : 'Marcar como hecha'}
-                </>
-              )}
-            </button>
-          </div>
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : task.is_done ? <><X className="w-4 h-4" /> Desmarcar</> : <><div className="w-5 h-5 rounded-full border-2 border-current" /> Marcar como hecha</>}
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors text-sm font-medium"
+                >
+                  {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Eliminar tarea'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

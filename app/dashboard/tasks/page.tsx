@@ -34,7 +34,7 @@ export default async function TasksPage() {
         {pendingTasks.length > 0 && (
           <section>
             <h2 className="text-lg font-semibold text-foreground mb-3">Pendientes</h2>
-            <TaskList tasks={pendingTasks} />
+            <TaskList tasks={pendingTasks} subjects={subjects} />
           </section>
         )}
 
@@ -44,7 +44,7 @@ export default async function TasksPage() {
               <CheckCircle2 className="w-5 h-5 text-accent" />
               <h2 className="text-lg font-semibold text-foreground">Completadas</h2>
             </div>
-            <TaskList tasks={completedTasks} />
+            <TaskList tasks={completedTasks} subjects={subjects} />
           </section>
         )}
 

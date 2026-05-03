@@ -159,6 +159,43 @@ export async function deleteMaterial(materialId: string): Promise<void> {
   revalidatePath('/dashboard')
 }
 
+export async function updateTask(
+  taskId: string,
+  title: string,
+  dueDate: string,
+  subjectId?: string,
+  description?: string
+): Promise<void> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('tasks')
+    .update({
+      title,
+      due_date: dueDate,
+      subject_id: subjectId || null,
+      description: description || null,
+    })
+    .eq('id', taskId)
+
+  if (error) throw error
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/tasks')
+}
+
+export async function updateSubjectColor(subjectId: string, colorCode: string): Promise<void> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('subjects')
+    .update({ color_code: colorCode })
+    .eq('id', subjectId)
+
+  if (error) throw error
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/subjects')
+}
+
 export async function deleteSubject(subjectId: string): Promise<void> {
   const supabase = await createClient()
   
