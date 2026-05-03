@@ -225,24 +225,24 @@ export default function SettingsPage() {
                   <h2 className="text-xl font-semibold text-foreground mb-2">Color Personalizado</h2>
                   <p className="text-sm text-muted-foreground mb-4">Elige un color para toda la app</p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <input
                     type="color"
                     value={customColor || '#00D418'}
                     onChange={(e) => handleColorChange(e.target.value)}
-                    className="w-20 h-20 rounded-lg cursor-pointer border-2 border-border"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg cursor-pointer border-2 border-border"
                   />
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1">
                     <Button
                       onClick={applyChanges}
                       disabled={!pendingChanges}
-                      className="gap-2"
+                      className="gap-2 w-full sm:w-auto"
                     >
                       <RotateCw className="w-4 h-4" />
                       Aplicar Color
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      El color se aplicará a toda la interfaz
+                      El color se aplicará a toda la interfaz en el tema actual
                     </p>
                   </div>
                 </div>
