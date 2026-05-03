@@ -39,6 +39,12 @@ export default function SettingsPage() {
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    // Don't track if we're interacting with interactive elements
+    const target = e.target as HTMLElement
+    if (target.closest('button, input, [role="button"]')) {
+      setCurrentY(0)
+      return
+    }
     const diff = e.touches[0].clientY - startY
     if (diff > 0) {
       setCurrentY(diff)
@@ -186,11 +192,12 @@ export default function SettingsPage() {
                   <h2 className="text-xl font-semibold text-foreground mb-2">Tema</h2>
                   <p className="text-sm text-muted-foreground mb-4">Selecciona tu tema favorito</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-2">
                   {themes.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => handleThemeChange(t.id)}
+                      type="button"
                       className={cn(
                         'p-4 rounded-lg border-2 transition-all text-left',
                         theme.id === t.id
@@ -203,13 +210,13 @@ export default function SettingsPage() {
                           <h3 className="font-semibold text-foreground">{t.name}</h3>
                           <p className="text-xs text-muted-foreground">{t.description}</p>
                         </div>
-                        {theme.id === t.id && <Check className="w-4 h-4 mt-0.5" />}
+                        {theme.id === t.id && <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />}
                       </div>
                       <div className="flex gap-2">
                         {Object.values(t.preview).slice(0, 3).map((color, i) => (
                           <div
                             key={i}
-                            className="w-6 h-6 rounded"
+                            className="w-6 h-6 rounded flex-shrink-0"
                             style={{ background: color }}
                           />
                         ))}
