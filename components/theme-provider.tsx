@@ -11,6 +11,8 @@ interface ThemeContextType {
   themes: Theme[]
   darkMode: DarkMode
   setDarkMode: (mode: DarkMode) => void
+  customPrimaryColor: string | null
+  setCustomPrimaryColor: (color: string | null) => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
@@ -18,6 +20,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(themes[0])
   const [darkMode, setDarkModeState] = useState<DarkMode>('auto')
+  const [customPrimaryColor, setCustomPrimaryColorState] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
   // Apply theme CSS based on dark mode
@@ -43,6 +46,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setDarkModeState(savedDarkMode)
     
     applyTheme(savedTheme, savedDarkMode)
+
+    // Restore custom color for Material theme
+    if (savedThemeId === 'm3e') {
+      const useCustom = localStorage.getItem('cleargrade-use-custom-color')
+      const savedColor = localStorage.getItem('cleargrade-custom-color')
+      if (useCustom === 'true' && savedColor) {
+        setCustomPrimaryColorState(savedColor)
+        document.documentElement.style.setProperty('--primary', savedColor)
+        document.documentElement.style.setProperty('--ring', savedColor)
+      }
+    }
 
     // Listen for system changes when auto
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
@@ -71,10 +85,26 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyTheme(theme, mode)
   }
 
+  const setCustomPrimaryColor = (color: string | null) => {
+    if (theme.id !== 'm3e') return
+    setCustomPrimaryColorState(color)
+    if (color) {
+      const root = document.documentElement
+      root.style.setProperty('--primary', color)
+      root.style.setProperty('--ring', color)
+      localStorage.setItem('cleargrade-custom-color', color)
+      localStorage.setItem('cleargrade-use-custom-color', 'true')
+    } else {
+      localStorage.removeItem('cleargrade-custom-color')
+      localStorage.removeItem('cleargrade-use-custom-color')
+      applyTheme(theme, darkMode)
+    }
+  }
+
   if (!mounted) return children
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, themes, darkMode, setDarkMode }}>
+    <ThemeContext.Provider value={{ theme, setTheme, themes, darkMode, setDarkMode, customPrimaryColor, setCustomPrimaryColor }}>
       {children}
     </ThemeContext.Provider>
   )
