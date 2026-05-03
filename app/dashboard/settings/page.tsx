@@ -103,7 +103,7 @@ export default function SettingsPage() {
                     onClick={() => handleDarkModeChange(mode)}
                     type="button"
                     className={cn(
-                      'p-4 rounded-lg border-2 transition-all text-left',
+                      'p-4 rounded-2xl border-2 transition-all text-left',
                       darkMode === mode
                         ? 'border-primary bg-primary/10'
                         : 'border-border hover:border-primary/50'
@@ -111,10 +111,10 @@ export default function SettingsPage() {
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-semibold text-foreground">
-                          {mode === 'light' && '☀️ Claro'}
-                          {mode === 'dark' && '🌙 Oscuro'}
-                          {mode === 'auto' && '🔄 Automático'}
+                        <h3 className="font-semibold text-foreground capitalize">
+                          {mode === 'light' && 'Claro'}
+                          {mode === 'dark' && 'Oscuro'}
+                          {mode === 'auto' && 'Automático'}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-1">
                           {mode === 'light' && 'Siempre modo claro'}
@@ -142,7 +142,7 @@ export default function SettingsPage() {
                     onClick={() => handleThemeChange(t.id)}
                     type="button"
                     className={cn(
-                      'p-4 rounded-lg border-2 transition-all text-left hover:border-primary/50',
+                      'p-4 rounded-2xl border-2 transition-all text-left hover:border-primary/50',
                       theme.id === t.id
                         ? 'border-primary bg-primary/10'
                         : 'border-border'
@@ -159,7 +159,7 @@ export default function SettingsPage() {
                       {Object.values(t.preview).slice(0, 3).map((color, i) => (
                         <div
                           key={i}
-                          className="w-8 h-8 rounded flex-shrink-0"
+                          className="w-8 h-8 rounded-full flex-shrink-0"
                           style={{ background: color }}
                         />
                       ))}
@@ -195,7 +195,7 @@ export default function SettingsPage() {
                   type="color"
                   value={customColor || '#00D418'}
                   onChange={(e) => handleColorChange(e.target.value)}
-                  className="w-24 h-24 rounded-lg cursor-pointer border-2 border-border"
+                  className="w-24 h-24 rounded-full cursor-pointer border-4 border-border"
                   disabled={!isMaterialTheme}
                 />
                 <div className="space-y-3 flex-1">
@@ -233,7 +233,7 @@ export default function SettingsPage() {
                           setTimeout(() => applyChanges(), 100)
                         }}
                         type="button"
-                        className="w-10 h-10 rounded-lg border-2 border-border hover:border-primary transition-all"
+                        className="w-10 h-10 rounded-full border-2 border-border hover:border-primary transition-all flex-shrink-0"
                         style={{ background: color }}
                         title={color}
                       />
