@@ -76,37 +76,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const savedColor = localStorage.getItem('cleargrade-custom-color')
       if (useCustom === 'true' && savedColor) {
         setCustomPrimaryColorState(savedColor)
-        // Use the conversion logic to apply hue
-        const hex = savedColor.replace('#', '')
-        const r = parseInt(hex.substring(0, 2), 16) / 255
-        const g = parseInt(hex.substring(2, 4), 16) / 255
-        const b = parseInt(hex.substring(4, 6), 16) / 255
-        
-        const max = Math.max(r, g, b)
-        const min = Math.min(r, g, b)
-        const delta = max - min
-        
-        let hue = 0
-        if (delta !== 0) {
-          if (max === r) hue = ((g - b) / delta) % 6
-          else if (max === g) hue = (b - r) / delta + 2
-          else hue = (r - g) / delta + 4
-          hue = hue * 60
-          if (hue < 0) hue += 360
-        }
-        
-        const isDark = savedDarkMode === 'dark' || (savedDarkMode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-        if (!isDark) {
-          document.documentElement.style.setProperty('--primary', `oklch(0.45 0.18 ${hue})`)
-          document.documentElement.style.setProperty('--secondary', `oklch(0.92 0.03 ${hue})`)
-          document.documentElement.style.setProperty('--border', `oklch(0.90 0.02 ${hue})`)
-          document.documentElement.style.setProperty('--ring', `oklch(0.45 0.18 ${hue})`)
-        } else {
-          document.documentElement.style.setProperty('--primary', `oklch(0.72 0.18 ${hue})`)
-          document.documentElement.style.setProperty('--secondary', `oklch(0.32 0.03 ${hue})`)
-          document.documentElement.style.setProperty('--border', `oklch(0.25 0.02 ${hue})`)
-          document.documentElement.style.setProperty('--ring', `oklch(0.72 0.18 ${hue})`)
-        }
+        document.documentElement.style.setProperty('--primary', savedColor)
+        document.documentElement.style.setProperty('--ring', savedColor)
       }
     }
 
@@ -156,43 +127,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setCustomPrimaryColorState(color)
     
     if (color) {
-      // Convert hex to RGB to extract hue
-      const hex = color.replace('#', '')
-      const r = parseInt(hex.substring(0, 2), 16) / 255
-      const g = parseInt(hex.substring(2, 4), 16) / 255
-      const b = parseInt(hex.substring(4, 6), 16) / 255
-      
-      const max = Math.max(r, g, b)
-      const min = Math.min(r, g, b)
-      const delta = max - min
-      
-      let hue = 0
-      if (delta !== 0) {
-        if (max === r) hue = ((g - b) / delta) % 6
-        else if (max === g) hue = (b - r) / delta + 2
-        else hue = (r - g) / delta + 4
-        hue = hue * 60
-        if (hue < 0) hue += 360
-      }
-      
-      // Apply custom hue to Material theme colors (preserve lightness and chroma)
-      const isDark = document.documentElement.classList.contains('dark')
-      if (!isDark) {
-        // Light mode - Material theme values with custom hue
-        document.documentElement.style.setProperty('--primary', `oklch(0.45 0.18 ${hue})`)
-        document.documentElement.style.setProperty('--primary-foreground', 'oklch(0.98 0.005 270)')
-        document.documentElement.style.setProperty('--secondary', `oklch(0.92 0.03 ${hue})`)
-        document.documentElement.style.setProperty('--border', `oklch(0.90 0.02 ${hue})`)
-        document.documentElement.style.setProperty('--ring', `oklch(0.45 0.18 ${hue})`)
-      } else {
-        // Dark mode - Material theme dark values with custom hue
-        document.documentElement.style.setProperty('--primary', `oklch(0.72 0.18 ${hue})`)
-        document.documentElement.style.setProperty('--primary-foreground', 'oklch(0.12 0.01 270)')
-        document.documentElement.style.setProperty('--secondary', `oklch(0.32 0.03 ${hue})`)
-        document.documentElement.style.setProperty('--border', `oklch(0.25 0.02 ${hue})`)
-        document.documentElement.style.setProperty('--ring', `oklch(0.72 0.18 ${hue})`)
-      }
-      
+      // Simple: apply color directly as hex to primary and ring
+      document.documentElement.style.setProperty('--primary', color)
+      document.documentElement.style.setProperty('--ring', color)
       localStorage.setItem('cleargrade-custom-color', color)
       localStorage.setItem('cleargrade-use-custom-color', 'true')
     } else {
