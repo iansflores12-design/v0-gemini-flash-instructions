@@ -51,37 +51,51 @@ export default function SettingsPage() {
     <main className="min-h-screen bg-background relative transition-colors duration-300">
       <div className="absolute top-4 right-4 z-10">
         <Link href="/dashboard">
-          <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted">
-            <X className="w-6 h-6 text-muted-foreground" />
+          <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted h-11 w-11">
+            <X className="w-5 h-5 text-muted-foreground" />
           </Button>
         </Link>
       </div>
 
-      <div className="max-w-6xl mx-auto p-4 sm:p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Configuración</h1>
-          <p className="text-muted-foreground">Personaliza el estilo de ClearGrade</p>
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 sm:pt-8">
+        <div className="mb-8 space-y-1">
+          <h1 className="text-4xl font-medium tracking-tight text-foreground">Configuración</h1>
+          <p className="text-base text-muted-foreground">Personaliza el estilo de ClearGrade</p>
         </div>
 
-        <div className="flex gap-2 mb-8 border-b border-border">
+        <div
+          className="mb-8 flex flex-wrap gap-1 rounded-full bg-muted/70 p-1.5 ring-1 ring-border/60 shadow-sm backdrop-blur-sm"
+          role="tablist"
+          aria-label="Secciones de ajustes"
+        >
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'appearance'}
             onClick={() => setActiveTab('appearance')}
             className={cn(
-              'px-4 py-2 font-medium border-b-2 transition-colors',
-              activeTab === 'appearance' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
+              'inline-flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-200',
+              activeTab === 'appearance'
+                ? 'bg-secondary text-foreground shadow-sm ring-1 ring-border/50'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
-            <Palette className="w-4 h-4 inline mr-2" />
+            <Palette className="w-4 h-4 shrink-0" />
             Apariencia
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'security'}
             onClick={() => setActiveTab('security')}
             className={cn(
-              'px-4 py-2 font-medium border-b-2 transition-colors',
-              activeTab === 'security' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
+              'inline-flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-200',
+              activeTab === 'security'
+                ? 'bg-secondary text-foreground shadow-sm ring-1 ring-border/50'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
-            <Lock className="w-4 h-4 inline mr-2" />
+            <Lock className="w-4 h-4 shrink-0" />
             Seguridad
           </button>
         </div>
@@ -89,15 +103,18 @@ export default function SettingsPage() {
         {activeTab === 'appearance' && (
           <div className="space-y-10">
             <section className="space-y-4">
-              <h2 className="text-xl font-semibold text-foreground">Modo de Color</h2>
+              <h2 className="text-xl font-medium text-foreground">Modo de color</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {(['light', 'dark', 'auto'] as const).map((mode) => (
                   <button
                     key={mode}
+                    type="button"
                     onClick={() => handleDarkModeChange(mode)}
                     className={cn(
-                      'p-4 rounded-2xl border-2 transition-all text-left',
-                      darkMode === mode ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'
+                      'p-5 rounded-[1.75rem] border text-left shadow-sm transition-all duration-200',
+                      darkMode === mode
+                        ? 'border-primary bg-primary/10 ring-2 ring-primary/25'
+                        : 'border-border/80 bg-card hover:border-primary/35 hover:shadow-md'
                     )}
                   >
                     <div className="flex items-start justify-between text-foreground capitalize">
@@ -110,15 +127,18 @@ export default function SettingsPage() {
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-xl font-semibold text-foreground">Temas Predefinidos</h2>
+              <h2 className="text-xl font-medium text-foreground">Temas predefinidos</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {themes.map((t) => (
                   <button
                     key={t.id}
+                    type="button"
                     onClick={() => handleThemeChange(t.id)}
                     className={cn(
-                      'p-4 rounded-2xl border-2 transition-all text-left',
-                      theme?.id === t.id ? 'border-primary bg-primary/5' : 'border-border'
+                      'p-5 rounded-[1.75rem] border text-left shadow-sm transition-all duration-200',
+                      theme?.id === t.id
+                        ? 'border-primary bg-primary/10 ring-2 ring-primary/25'
+                        : 'border-border/80 bg-card hover:border-primary/30 hover:shadow-md'
                     )}
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -138,8 +158,8 @@ export default function SettingsPage() {
               </div>
             </section>
 
-            <section className={cn("space-y-6 pt-6 border-t border-border", !isMaterialTheme && "opacity-40 grayscale pointer-events-none")}>
-              <h2 className="text-xl font-semibold text-foreground">Personalización Material</h2>
+            <section className={cn("space-y-6 pt-8 border-t border-border", !isMaterialTheme && "opacity-40 grayscale pointer-events-none")}>
+              <h2 className="text-xl font-medium text-foreground">Personalización Material</h2>
               <div className="flex flex-col sm:flex-row items-center gap-8">
                 <div className="relative w-24 h-24 rounded-3xl border-4 border-border shadow-xl overflow-hidden" style={{ backgroundColor: pickerColor }}>
                   <input
