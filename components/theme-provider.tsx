@@ -41,29 +41,38 @@ function applyTokens(theme: Theme, isDark: boolean, customColor: string | null) 
   const root = document.documentElement
   const tokens = isDark ? theme.dark : theme.light
 
-  // 1. Limpiar variables anteriores para evitar persistencia de colores de otros temas[cite: 3]
+  // 1. Limpiar variables anteriores para evitar conflictos de color
   ALL_VARS.forEach(v => root.style.removeProperty(v))
 
-  // 2. Aplicar tokens base del tema seleccionado[cite: 3]
+  // 2. Aplicar tokens base del tema (m3e, One UI, etc.)[cite: 3]
   Object.entries(tokens).forEach(([prop, value]) => {
     root.style.setProperty(prop, value)
   })
 
-  // 3. SOBREESCRITURA DINÁMICA (Elimina el "efecto Navidad")[cite: 3]
+  // 3. INYECCIÓN DE COLOR PERSONALIZADO (Matando el efecto Navidad)[cite: 3]
   if (customColor && theme.id === 'm3e') {
-    // Aplicar color principal y anillo de enfoque[cite: 3]
+    // Colores de acción principales[cite: 3]
     root.style.setProperty('--primary', customColor)
     root.style.setProperty('--ring', customColor)
     
-    // Ajustar contraste de texto sobre el color principal[cite: 3]
+    // Contraste de texto dinámico[cite: 3]
     root.style.setProperty('--primary-foreground', isDark ? '#ffffff' : '#000000')
     
-    // Sincronizar bordes y fondos sutiles con el color personalizado para matar el verde[cite: 3]
-    // Se añade transparencia (hex + 40/15/25) para que el diseño sea coherente
-    root.style.setProperty('--border', `${customColor}40`) 
-    root.style.setProperty('--muted', `${customColor}15`)  
-    root.style.setProperty('--accent', `${customColor}25`) 
-    root.style.setProperty('--muted-foreground', isDark ? '215 20.2% 65.1%' : '215.4 16.3% 46.9%')
+    // Sincronización de bordes y estados (transparencias dinámicas)[cite: 3]
+    root.style.setProperty('--border', `${customColor}40`) // Bordes sutiles
+    root.style.setProperty('--muted', `${customColor}15`)  // Fondos de inputs
+    root.style.setProperty('--accent', `${customColor}25`) // Hovers en botones
+    
+    // 4. Sincronización de Fondos y Tarjetas (Clean Look)
+    if (isDark) {
+      // Fondo casi negro con un tinte sutil del color custom
+      root.style.setProperty('--background', `${customColor}05`) 
+      root.style.setProperty('--card', `${customColor}08`)
+    } else {
+      // Fondo ultra limpio con un matiz imperceptible
+      root.style.setProperty('--background', `${customColor}03`)
+      root.style.setProperty('--card', '#ffffff')
+    }
   }
 
   root.classList.toggle('dark', isDark)
