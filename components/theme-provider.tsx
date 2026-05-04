@@ -66,12 +66,22 @@ function applyTokens(theme: Theme, isDark: boolean, customColor: string | null) 
     root.style.setProperty('--accent', `${customColor}30`)     // 18% opacidad (Hovers)
     root.style.setProperty('--border', `${customColor}45`)     // 27% opacidad (Bordes de tarjetas)
 
-    // Ajuste de fondo para que la interfaz se sienta de una sola pieza
+    // Fondos opacos: los sufijos hex tipo #rrggbb05 (~2% alpha) dejaban el body casi
+    // transparente y se veía el canvas claro del navegador (modo oscuro “lavado”).
     if (isDark) {
-      root.style.setProperty('--background', `${customColor}05`) 
-      root.style.setProperty('--card', `${customColor}08`)
+      root.style.setProperty(
+        '--background',
+        `color-mix(in srgb, ${customColor} 14%, rgb(9, 12, 7))`
+      )
+      root.style.setProperty(
+        '--card',
+        `color-mix(in srgb, ${customColor} 12%, rgb(16, 20, 12))`
+      )
     } else {
-      root.style.setProperty('--background', `${customColor}03`)
+      root.style.setProperty(
+        '--background',
+        `color-mix(in srgb, ${customColor} 10%, rgb(252, 253, 250))`
+      )
       root.style.setProperty('--card', '#ffffff')
     }
   }
