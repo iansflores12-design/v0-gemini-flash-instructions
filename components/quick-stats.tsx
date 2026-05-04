@@ -13,19 +13,22 @@ export function QuickStats({ totalPending, todayCount, subjectsCount }: QuickSta
         icon={<CalendarDays className="w-5 h-5" />}
         value={todayCount}
         label="Hoy"
+        // Usamos primary para el color principal
         color="bg-primary/10 text-primary"
       />
       <StatCard
         icon={<ListTodo className="w-5 h-5" />}
         value={totalPending}
         label="Pendientes"
-        color="bg-accent/10 text-accent"
+        // Usamos accent que ya configuramos en el provider para que sea tu color custom
+        color="bg-accent/20 text-primary" 
       />
       <StatCard
         icon={<BookOpen className="w-5 h-5" />}
         value={subjectsCount}
         label="Materias"
-        color="bg-chart-3/20 text-chart-3"
+        // CAMBIO CLAVE: Quitamos 'chart-3' (el verde) y usamos variables del sistema
+        color="bg-primary/10 text-primary"
       />
     </div>
   )

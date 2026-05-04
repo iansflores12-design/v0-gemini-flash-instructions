@@ -27,6 +27,7 @@ const ALL_VARS = [
   '--accent', '--accent-foreground',
   '--destructive', '--destructive-foreground',
   '--border', '--input', '--ring', '--radius',
+  '--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5'
 ]
 
 function resolveIsDark(mode: DarkMode): boolean {
@@ -41,35 +42,35 @@ function applyTokens(theme: Theme, isDark: boolean, customColor: string | null) 
   const root = document.documentElement
   const tokens = isDark ? theme.dark : theme.light
 
-  // 1. Limpiar variables anteriores para evitar conflictos de color
+  // 1. Limpiar rastro de temas anteriores
   ALL_VARS.forEach(v => root.style.removeProperty(v))
 
-  // 2. Aplicar tokens base del tema (m3e, One UI, etc.)[cite: 3]
+  // 2. Aplicar tokens del tema seleccionado (m3e, One UI, etc.)
   Object.entries(tokens).forEach(([prop, value]) => {
     root.style.setProperty(prop, value)
   })
 
-  // 3. INYECCIÓN DE COLOR PERSONALIZADO (Matando el efecto Navidad)[cite: 3]
+  // 3. EXTERMINADOR DE VERDE: Inyección de Color Personalizado
   if (customColor && theme.id === 'm3e') {
-    // Colores de acción principales[cite: 3]
+    // Color principal y foco
     root.style.setProperty('--primary', customColor)
     root.style.setProperty('--ring', customColor)
     
-    // Contraste de texto dinámico[cite: 3]
+    // Contraste de texto automático
     root.style.setProperty('--primary-foreground', isDark ? '#ffffff' : '#000000')
     
-    // Sincronización de bordes y estados (transparencias dinámicas)[cite: 3]
-    root.style.setProperty('--border', `${customColor}40`) // Bordes sutiles
-    root.style.setProperty('--muted', `${customColor}15`)  // Fondos de inputs
-    root.style.setProperty('--accent', `${customColor}25`) // Hovers en botones
-    
-    // 4. Sincronización de Fondos y Tarjetas (Clean Look)
+    // Matamos el verde en burbujas de iconos, chips de semanas y hovers
+    // Usamos el color custom con diferentes niveles de transparencia hex
+    root.style.setProperty('--muted', `${customColor}20`)      // 12% opacidad (Chips y fondos de iconos)
+    root.style.setProperty('--secondary', `${customColor}15`)  // 8% opacidad
+    root.style.setProperty('--accent', `${customColor}30`)     // 18% opacidad (Hovers)
+    root.style.setProperty('--border', `${customColor}45`)     // 27% opacidad (Bordes de tarjetas)
+
+    // Ajuste de fondo para que la interfaz se sienta de una sola pieza
     if (isDark) {
-      // Fondo casi negro con un tinte sutil del color custom
       root.style.setProperty('--background', `${customColor}05`) 
       root.style.setProperty('--card', `${customColor}08`)
     } else {
-      // Fondo ultra limpio con un matiz imperceptible
       root.style.setProperty('--background', `${customColor}03`)
       root.style.setProperty('--card', '#ffffff')
     }
