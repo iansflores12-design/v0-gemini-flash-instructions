@@ -3,6 +3,8 @@
 // The ThemeProvider applies these via JS — globals.css is the SSR default only.
 // Default palette: #090c04 | #171d10 | #516435 | #99be64
 
+// lib/themes.ts
+
 export interface Theme {
   id: string
   name: string
@@ -12,7 +14,6 @@ export interface Theme {
   dark: Record<string, string>
 }
 
-// Helper: build a full token set from a hue (oklch-based M3 tonal palette)
 function greenTokens(hue: number, lightness: number, chroma: number) {
   return {
     light: {
@@ -281,15 +282,8 @@ export const themes: Theme[] = [
       '--radius':                '0.5rem',
     },
   },
-]
-
-export function getThemeById(id: string): Theme | undefined {
-  return themes.find((t) => t.id === id)
-}
-
-export function getDefaultTheme(): Theme {
-  return themes[0]
-}
+  {
+    id: 'ocean',
     name: 'Ocean',
     description: 'Azules oceánicos y profundos',
     preview: { primary: '#0077b6', secondary: '#90e0ef', accent: '#023e8a' },
@@ -488,7 +482,7 @@ export function getDefaultTheme(): Theme {
       '--radius':                '0.875rem',
     },
   },
-]
+]; // Fin de themes
 
 export function getThemeById(id: string): Theme | undefined {
   return themes.find((t) => t.id === id)
