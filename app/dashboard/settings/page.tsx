@@ -208,28 +208,28 @@ export default function SettingsPage() {
               </div>
 
               {/* Quick Color Presets */}
-              {isMaterialTheme && (
-                <div className="space-y-3 mt-6 pt-6 border-t border-border">
-                  <p className="text-sm font-medium text-foreground">Colores Rápidos</p>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-                    {[
-                      '#516435', '#99be64', '#090c04', '#171d10',
-                      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
-                      '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B88B'
-                    ].map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => {
-                          setPickerColor(color)
-                          applyCustomColor(color)
-                        }}
-                        type="button"
-                        className={cn(
-                          'w-10 h-10 rounded-full border-2 transition-all flex-shrink-0',
-                          activeCustomColor === color ? 'border-primary scale-110' : 'border-border hover:border-primary'
-                        )}
-                        style={{ background: color }}
-                        title={color}
+{isMaterialTheme && (
+  <div className="space-y-3 mt-6 pt-6 border-t border-border">
+    <p className="text-sm font-medium text-foreground">Colores Rápidos</p>
+    <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+      {[
+        '#516435', '#99be64', '#090c04', '#171d10',
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
+        '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B88B'
+      ].map((color) => (
+        <button
+          key={color}
+          onClick={() => {
+            setPickerColor(color); // Actualiza el círculo
+            applyCustomColor(color); // ¡Manda la orden al ThemeProvider!
+          }}
+          type="button"
+          className={cn(
+            'w-10 h-10 rounded-full border-2 transition-all flex-shrink-0',
+            activeCustomColor === color ? 'border-primary scale-110' : 'border-border hover:border-primary'
+          )}
+          style={{ background: color }}
+          title={color}
                       />
                     ))}
                   </div>
