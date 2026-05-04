@@ -1,54 +1,65 @@
-import { cn } from "@/lib/utils"
+import { Check } from "lucide-react";
+import type { ReactNode } from "react";
 
-interface LogoProps {
-  className?: string;
-  size?: 'sm' | 'md' | 'lg';
+export type SuccessCheckSectionProps = {
+  children?: ReactNode;
+  iconSize?: 12 | 14 | 16 | 20;
+  strokeWidth?: number;
+  sectionClassName?: string;
+  innerClassName?: string;
+  iconRowClassName?: string;
+  circleClassName?: string;
+};
+
+const sizeMap: Record<NonNullable<SuccessCheckSectionProps["iconSize"]>, string> =
+  {
+    12: "w-12 h-12",
+    14: "w-14 h-14",
+    16: "w-16 h-16",
+    20: "w-20 h-20",
+  };
+
+function merge(...parts: (string | undefined)[]) {
+  return parts.filter(Boolean).join(" ");
 }
 
-export function ClearGradeLogo({ className, size = 'md' }: LogoProps) {
-  // Dimensiones del contenedor circular exterior
-  const containerSizes = {
-    sm: "p-2",
-    md: "p-4",
-    lg: "p-6"
-  }
-
-  // Dimensiones del SVG interno
-  const iconSizes = {
-    sm: "w-8 h-8",
-    md: "w-16 h-16",
-    lg: "w-24 h-24"
-  }
-
+/**
+ * Sección de éxito: layout centrado + check en círculo (primary/10) + contenido opcional.
+ * Requiere: `lucide-react`, Tailwind con color `primary`, clase `animate-scale-in` si la usas.
+ */
+export function SuccessCheckSection({
+  children,
+  iconSize = 16,
+  strokeWidth = 2.5,
+  sectionClassName,
+  innerClassName,
+  iconRowClassName,
+  circleClassName,
+}: SuccessCheckSectionProps) {
   return (
-    <div className={cn("flex justify-center mb-6 animate-scale-in", className)}>
-      {/* Contenedor circular con fondo suave del color del tema */}
-      <div className={cn("rounded-full bg-primary/10", containerSizes[size])}>
-        <svg
-          viewBox="0 0 100 100"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className={cn("text-primary", iconSizes[size])}
+    <section className={merge("px-4 pt-20 pb-16", sectionClassName)}>
+      <div className={merge("max-w-md mx-auto text-center", innerClassName)}>
+        <div
+          className={merge(
+            "flex justify-center mb-6 animate-scale-in",
+            iconRowClassName,
+          )}
         >
-          {/* Círculo sólido interno que usa el color principal del tema */}
-          <circle 
-            cx="50" 
-            cy="50" 
-            r="48" 
-            className="fill-primary" 
-          />
-          
-          {/* El Checkmark que cambia según el contraste del tema */}
-          <path
-            d="M32 52L44 64L68 36"
-            stroke="currentColor"
-            strokeWidth="10"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="text-primary-foreground dark:text-background"
-          />
-        </svg>
+          <div
+            className={merge(
+              "p-4 rounded-full bg-primary/10",
+              circleClassName,
+            )}
+          >
+            <Check
+              className={merge(sizeMap[iconSize], "text-primary")}
+              strokeWidth={strokeWidth}
+              aria-hidden
+            />
+          </div>
+        </div>
+        {children}
       </div>
-    </div>
-  )
+    </section>
+  );
 }
