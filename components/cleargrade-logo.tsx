@@ -1,6 +1,32 @@
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 
+interface ClearGradeLogoProps {
+  size?: 'sm' | 'md' | 'lg'
+  showText?: boolean
+}
+
+export function ClearGradeLogo({ size = 'md', showText = true }: ClearGradeLogoProps) {
+  const sizes = {
+    sm: { logo: 'w-8 h-8', text: 'text-lg' },
+    md: { logo: 'w-10 h-10', text: 'text-xl' },
+    lg: { logo: 'w-14 h-14', text: 'text-2xl' },
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className={`${sizes[size].logo} rounded-xl bg-primary flex items-center justify-center`}>
+        <Check className="w-2/3 h-2/3 text-primary-foreground" strokeWidth={3} />
+      </div>
+      {showText && (
+        <span className={`${sizes[size].text} font-bold text-foreground`}>
+          ClearGrade
+        </span>
+      )}
+    </div>
+  )
+}
+
 export type SuccessCheckSectionProps = {
   children?: ReactNode;
   iconSize?: 12 | 14 | 16 | 20;
