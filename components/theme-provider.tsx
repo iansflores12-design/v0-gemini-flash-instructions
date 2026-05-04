@@ -41,19 +41,29 @@ function applyTokens(theme: Theme, isDark: boolean, customColor: string | null) 
   const root = document.documentElement
   const tokens = isDark ? theme.dark : theme.light
 
-  // 1. Limpiar variables con una transición suave para evitar parpadeos bruscos
+  // 1. Limpiar variables anteriores para evitar persistencia de colores de otros temas[cite: 3]
   ALL_VARS.forEach(v => root.style.removeProperty(v))
 
-  // 2. Aplicar tokens del tema seleccionado
+  // 2. Aplicar tokens base del tema seleccionado[cite: 3]
   Object.entries(tokens).forEach(([prop, value]) => {
     root.style.setProperty(prop, value)
   })
 
-  // 3. Priorizar color personalizado para Material 3 (m3e)
+  // 3. SOBREESCRITURA DINÁMICA (Elimina el "efecto Navidad")[cite: 3]
   if (customColor && theme.id === 'm3e') {
+    // Aplicar color principal y anillo de enfoque[cite: 3]
     root.style.setProperty('--primary', customColor)
     root.style.setProperty('--ring', customColor)
-    // Opcional: Podrías derivar un color de fondo sutil aquí para evitar el verde
+    
+    // Ajustar contraste de texto sobre el color principal[cite: 3]
+    root.style.setProperty('--primary-foreground', isDark ? '#ffffff' : '#000000')
+    
+    // Sincronizar bordes y fondos sutiles con el color personalizado para matar el verde[cite: 3]
+    // Se añade transparencia (hex + 40/15/25) para que el diseño sea coherente
+    root.style.setProperty('--border', `${customColor}40`) 
+    root.style.setProperty('--muted', `${customColor}15`)  
+    root.style.setProperty('--accent', `${customColor}25`) 
+    root.style.setProperty('--muted-foreground', isDark ? '215 20.2% 65.1%' : '215.4 16.3% 46.9%')
   }
 
   root.classList.toggle('dark', isDark)
@@ -137,7 +147,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyTokens(themeRef.current, resolveIsDark(darkModeRef.current), color)
   }
 
-  // IMPORTANTE: Evitar renderizar contenido sin variables aplicadas[cite: 1]
   return (
     <ThemeContext.Provider value={{ theme, themes, setTheme, darkMode, setDarkMode, customColor, setCustomColor }}>
       <div style={{ visibility: mounted ? 'visible' : 'hidden' }}>
