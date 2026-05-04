@@ -45,9 +45,7 @@ const showNotification = (title: string, body: string) => {
       body,
       icon: '/icon-192.png',
       badge: '/icon-192.png',
-      vibrate: [200, 100, 200],
       tag: 'agenda-processed',
-      renotify: true,
     })
   } catch {}
 }
