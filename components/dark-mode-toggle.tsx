@@ -1,24 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { Sun, Moon, SunMoon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTheme } from '@/components/theme-provider'
 
 type DarkMode = 'light' | 'dark' | 'auto'
-
-const KEY = 'cleargrade-dark-mode'
-
-function applyDark(mode: DarkMode) {
-  const root = document.documentElement
-  if (mode === 'dark') {
-    root.classList.add('dark')
-  } else if (mode === 'light') {
-    root.classList.remove('dark')
-  } else {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    root.classList.toggle('dark', prefersDark)
-  }
-}
 
 const options: { mode: DarkMode; icon: React.ReactNode; label: string }[] = [
   { mode: 'light', icon: <Sun className="w-4 h-4" />, label: 'Claro' },
@@ -27,40 +13,26 @@ const options: { mode: DarkMode; icon: React.ReactNode; label: string }[] = [
 ]
 
 export function DarkModeToggle() {
-  const [mode, setMode] = useState<DarkMode>('auto')
-
-  useEffect(() => {
-    const saved = (localStorage.getItem(KEY) as DarkMode) || 'auto'
-    setMode(saved)
-    applyDark(saved)
-
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const onChange = () => {
-      const current = (localStorage.getItem(KEY) as DarkMode) || 'auto'
-      if (current === 'auto') applyDark('auto')
-    }
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
-
-  const handleSelect = (m: DarkMode) => {
-    setMode(m)
-    localStorage.setItem(KEY, m)
-    applyDark(m)
-  }
+  const { darkMode, setDarkMode } = useTheme()
 
   return (
-    <div className="inline-flex items-center gap-0.5 p-1 rounded-2xl bg-secondary border border-border">
+    <div
+      className="inline-flex items-center gap-0.5 p-1 rounded-full bg-muted/80 border border-border/60 shadow-sm backdrop-blur-sm"
+      role="group"
+      aria-label="Modo de color"
+    >
       {options.map(({ mode: m, icon, label }) => (
         <button
           key={m}
-          onClick={() => handleSelect(m)}
+          type="button"
+          onClick={() => setDarkMode(m)}
           aria-label={label}
           title={label}
+          aria-pressed={darkMode === m}
           className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200',
-            mode === m
-              ? 'bg-background text-foreground shadow-sm'
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200',
+            darkMode === m
+              ? 'bg-secondary text-foreground shadow-sm ring-1 ring-border/80'
               : 'text-muted-foreground hover:text-foreground'
           )}
         >
