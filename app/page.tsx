@@ -153,7 +153,7 @@ function FeatureCard({
 }) {
   return (
     <div className="flex gap-4 p-4 rounded-2xl bg-card border border-border">
-      <div className={`shrink-0 w-12 h-12 rounded-xl ${color} flex items-center justify-center`}>
+      <div className={`flex-shrink-0 w-12 h-12 rounded-xl ${color} flex items-center justify-center`}>
         {icon}
       </div>
       <div>
