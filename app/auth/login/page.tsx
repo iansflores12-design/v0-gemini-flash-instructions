@@ -45,7 +45,6 @@ export default function LoginPage() {
           <div className="mb-4">
             <ClearGradeLogo size="md" />
           </div>
-          <h1 className="text-2xl font-semibold text-foreground">ClearGrade</h1>
           <p className="text-muted-foreground mt-1">Inicia sesion para continuar</p>
         </div>
 
