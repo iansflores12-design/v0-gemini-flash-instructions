@@ -232,7 +232,7 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
               relative cursor-pointer rounded-3xl border-2 border-dashed 
               transition-all duration-300 ease-out
               ${isDragging 
-                ? 'border-primary bg-primary/8 scale-[1.02]' 
+                ? 'border-primary bg-primary/12 scale-[1.01]' 
                 : selectedFile 
                   ? 'border-primary/40 bg-primary/5' 
                   : 'border-outline-variant bg-surface-container hover:border-primary/40 hover:bg-primary/5'
