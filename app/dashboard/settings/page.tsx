@@ -3,16 +3,24 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/components/theme-provider'
 import { Button } from '@/components/ui/button'
-import { Check, Palette, Lock, RotateCw, X } from 'lucide-react' // Añadido X
+import { Check, Palette, Lock, RotateCw, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import Link from 'next/link' // Importado para el botón de cierre
+import Link from 'next/link'
 
 export default function SettingsPage() {
-  const { theme, setTheme, darkMode, setDarkMode, themes, customColor: activeCustomColor, setCustomColor: applyCustomColor } = useTheme()
+  const { 
+    theme, 
+    setTheme, 
+    darkMode, 
+    setDarkMode, 
+    themes, 
+    customColor: activeCustomColor, 
+    setCustomColor: applyCustomColor 
+  } = useTheme()
+
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<'appearance' | 'security'>('appearance')
   const [pickerColor, setPickerColor] = useState('#516435')
-  const [pendingChanges, setPendingChanges] = useState(false) // Nuevo estado para feedback
 
   const isMaterialTheme = theme.id === 'm3e'
 
@@ -22,7 +30,7 @@ export default function SettingsPage() {
     if (saved) setPickerColor(saved)
   }, [])
 
-  if (!mounted) return null
+  if (!mounted) return null[cite: 11]
 
   const handleThemeChange = (themeId: string) => {
     setTheme(themeId)
@@ -32,20 +40,17 @@ export default function SettingsPage() {
     setDarkMode(mode)
   }
 
+  // Cambio instantáneo: Aplicamos el color al motor de temas en cuanto se elige
   const handleColorChange = (color: string) => {
     setPickerColor(color)
-    setPendingChanges(true) // Habilita feedback visual
-  }
-
-  const applyChanges = () => {
-    if (!isMaterialTheme) return
-    applyCustomColor(pickerColor)
-    setPendingChanges(false)
+    if (isMaterialTheme) {
+      applyCustomColor(color)[cite: 11]
+    }
   }
 
   return (
-    <main className="min-h-screen bg-background relative">
-      {/* Botón de Cierre (X) */}
+    <main className="min-h-screen bg-background relative transition-colors duration-300">
+      {/* Botón de Cierre (X) - Redirige al Dashboard */}
       <div className="absolute top-4 right-4 z-10">
         <Link href="/dashboard">
           <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted">
@@ -89,73 +94,64 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* Content */}
+        {/* Appearance Content */}
         {activeTab === 'appearance' && (
-          <div className="space-y-8">
-            {/* Modo de Color */}
+          <div className="space-y-10">
+            
+            {/* Modo de Color (Claro/Oscuro/Auto) */}
             <section className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-semibold text-foreground mb-2">Modo de Color</h2>
-                <p className="text-sm text-muted-foreground mb-6">Elige cómo prefieres ver la app</p>
-              </div>
+              <h2 className="text-xl font-semibold text-foreground">Modo de Color</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {(['light', 'dark', 'auto'] as const).map((mode) => (
                   <button
                     key={mode}
                     onClick={() => handleDarkModeChange(mode)}
-                    type="button"
                     className={cn(
                       'p-4 rounded-2xl border-2 transition-all text-left',
-                      darkMode === mode
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-primary/50'
+                      darkMode === mode ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'
                     )}
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-semibold text-foreground capitalize">
+                        <h3 className="font-medium text-foreground capitalize">
                           {mode === 'light' ? 'Claro' : mode === 'dark' ? 'Oscuro' : 'Automático'}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {mode === 'light' && 'Siempre modo claro'}
-                          {mode === 'dark' && 'Siempre modo oscuro'}
+                          {mode === 'light' && 'Estilo brillante'}
+                          {mode === 'dark' && 'Ahorro de batería'}
                           {mode === 'auto' && 'Según el sistema'}
                         </p>
                       </div>
-                      {darkMode === mode && <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />}
+                      {darkMode === mode && <Check className="w-4 h-4 text-primary" />}
                     </div>
                   </button>
                 ))}
               </div>
             </section>
 
-            {/* Temas */}
+            {/* Selector de Temas (Todos tus temas favoritos) */}
             <section className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-semibold text-foreground mb-2">Tema</h2>
-                <p className="text-sm text-muted-foreground mb-4">Selecciona tu estilo visual preferido</p>
-              </div>
+              <h2 className="text-xl font-semibold text-foreground">Temas Predefinidos</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {themes.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => handleThemeChange(t.id)}
-                    type="button"
                     className={cn(
                       'p-4 rounded-2xl border-2 transition-all text-left hover:border-primary/50',
-                      theme.id === t.id ? 'border-primary bg-primary/10' : 'border-border'
+                      theme.id === t.id ? 'border-primary bg-primary/5' : 'border-border'
                     )}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <h3 className="font-semibold text-foreground">{t.name}</h3>
-                        <p className="text-xs text-muted-foreground mt-1">{t.description}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1 leading-tight">{t.description}</p>
                       </div>
-                      {theme.id === t.id && <Check className="w-4 h-4 mt-0.5 flex-shrink-0 ml-2" />}
+                      {theme.id === t.id && <Check className="w-4 h-4 text-primary" />}
                     </div>
                     <div className="flex gap-2">
                       {Object.values(t.preview).slice(0, 3).map((color, i) => (
-                        <div key={i} className="w-8 h-8 rounded-full" style={{ background: color }} />
+                        <div key={i} className="w-6 h-6 rounded-full" style={{ background: color }} />
                       ))}
                     </div>
                   </button>
@@ -163,81 +159,66 @@ export default function SettingsPage() {
               </div>
             </section>
 
-            {/* Color Personalizado - Solo para Material 3 */}
-            <section className="space-y-4">
+            {/* Color Dinámico (Solo para Material 3) */}
+            <section className={cn("space-y-6 pt-6 border-t border-border", !isMaterialTheme && "opacity-40 grayscale pointer-events-none")}>
               <div>
-                <h2 className="text-2xl font-semibold text-foreground mb-2 flex items-center gap-2">
-                  Color Personalizado
+                <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                  Personalización Material You
                   {!isMaterialTheme && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground uppercase tracking-wider">
-                      Solo Material
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground uppercase">
+                      Inactivo
                     </span>
                   )}
                 </h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {isMaterialTheme 
-                    ? 'Define el color de acento para toda la app (estilo Material You)'
-                    : 'Activa el tema "Material 3 Expressive" para usar esta función'
-                  }
+                <p className="text-sm text-muted-foreground">
+                  Ajusta el color de acento y mira cómo Tree OS se adapta al instante.
                 </p>
               </div>
-              <div className={cn(
-                "flex flex-col sm:flex-row items-start sm:items-center gap-6",
-                !isMaterialTheme && "opacity-40 pointer-events-none"
-              )}>
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-border shadow-inner">
-                  <input
-                    type="color"
-                    value={pickerColor}
-                    onChange={(e) => handleColorChange(e.target.value)}
-                    className="w-full h-full cursor-pointer scale-125"
-                    disabled={!isMaterialTheme}
-                  />
-                </div>
-                <div className="space-y-3 flex-1 w-full">
-                  <Button
-                    onClick={applyChanges}
-                    disabled={!isMaterialTheme || !pendingChanges}
-                    className="gap-2 w-full sm:w-auto"
-                  >
-                    <RotateCw className={cn("w-4 h-4", pendingChanges && "animate-spin-once")} />
-                    Aplicar Color
-                  </Button>
-                  <p className="text-xs text-muted-foreground">
-                    Este cambio afecta a botones, acentos y superficies.
-                  </p>
-                </div>
-              </div>
 
-              {/* Quick Color Presets */}
-              {isMaterialTheme && (
-                <div className="space-y-3 mt-6 pt-6 border-t border-border">
-                  <p className="text-sm font-medium text-foreground">Ajustes rápidos</p>
-                  <div className="flex flex-wrap gap-3">
-                    {[
-                      '#516435', '#99be64', '#00D418', '#171d10',
-                      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
-                      '#F7DC6F', '#BB8FCE'
-                    ].map((color) => (
+              <div className="flex flex-col sm:flex-row items-center gap-8">
+                {/* Input de color mejorado */}
+                <div className="relative group">
+                  <div 
+                    className="w-24 h-24 rounded-3xl border-4 border-border shadow-2xl overflow-hidden transition-transform group-hover:scale-105 active:scale-95"
+                    style={{ backgroundColor: pickerColor }}
+                  >
+                    <input
+                      type="color"
+                      value={pickerColor}
+                      onChange={(e) => handleColorChange(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Ajustes Rápidos */}
+                <div className="flex-1 space-y-3">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Presets Tree OS</p>
+                  <div className="flex flex-wrap gap-2">
+                    {['#516435', '#99be64', '#7C4DFF', '#FF5252', '#00E676', '#40C4FF', '#FFD740'].map((c) => (
                       <button
-                        key={color}
-                        onClick={() => {
-                          setPickerColor(color)
-                          applyCustomColor(color)
-                          setPendingChanges(false)
-                        }}
-                        type="button"
+                        key={c}
+                        onClick={() => handleColorChange(c)}
                         className={cn(
-                          'w-10 h-10 rounded-full border-2 transition-all hover:scale-110 active:scale-95',
-                          activeCustomColor === color ? 'border-primary' : 'border-transparent'
+                          "w-10 h-10 rounded-full border-2 transition-all hover:scale-110 active:scale-90",
+                          activeCustomColor === c ? "border-primary ring-2 ring-primary/20" : "border-transparent"
                         )}
-                        style={{ background: color }}
+                        style={{ backgroundColor: c }}
                       />
                     ))}
                   </div>
                 </div>
-              )}
+              </div>
             </section>
+          </div>
+        )}
+
+        {/* Security Tab (Placeholder) */}
+        {activeTab === 'security' && (
+          <div className="p-8 rounded-3xl border-2 border-dashed border-border text-center">
+            <Lock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-lg font-medium text-foreground">Seguridad y Privacidad</h2>
+            <p className="text-sm text-muted-foreground">Próximamente: Autenticación de dos pasos y gestión de sesiones.</p>
           </div>
         )}
       </div>
