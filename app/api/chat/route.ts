@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { getAdminConfig } from '@/lib/admin-config'
 import { SUBSCRIPTION_LIMITS } from '@/lib/types'
 
-// Global Gemini API Key - Updated
 const GEMINI_API_KEY = 'AIzaSyAoiN0VsY3AjLhyZZg08Y9Dnp7052h8TIY'
 
 async function callGeminiAPI(prompt: string): Promise<string> {
@@ -11,49 +10,28 @@ async function callGeminiAPI(prompt: string): Promise<string> {
   const timeoutId = setTimeout(() => controller.abort(), 30000)
 
   try {
-    // Probar primero con gemini-1.5-flash (más nuevo)
     let response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{
-            role: 'user',
-            parts: [{ text: prompt }]
-          }],
-          generationConfig: {
-            maxOutputTokens: 500,
-            temperature: 0.7,
-            topP: 0.9,
-          }
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 500, temperature: 0.7, topP: 0.9 }
         }),
         signal: controller.signal
       }
     )
 
-    // Si falla con 404, intentar con gemini-pro
     if (response.status === 404) {
-      console.log('Modelo gemini-1.5-flash no disponible, usando gemini-pro')
       response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{
-              role: 'user',
-              parts: [{ text: prompt }]
-            }],
-            generationConfig: {
-              maxOutputTokens: 500,
-              temperature: 0.7,
-              topP: 0.9,
-            }
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: 500, temperature: 0.7, topP: 0.9 }
           }),
           signal: controller.signal
         }
@@ -64,25 +42,13 @@ async function callGeminiAPI(prompt: string): Promise<string> {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Gemini API error:', response.status, errorText)
-      
-      if (response.status === 403 || response.status === 401) {
-        throw new Error('API_KEY_INVALIDA')
-      } else if (response.status === 429) {
-        throw new Error('LIMITE_EXCEDIDO')
-      } else if (response.status === 404) {
-        throw new Error('MODELO_NO_ENCONTRADO')
-      } else {
-        throw new Error(`API_ERROR_${response.status}`)
-      }
+      throw new Error(`API_ERROR_${response.status}`)
     }
 
     const data = await response.json()
-    
     const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text
     
     if (!reply || reply.trim() === '') {
-      console.error('Respuesta vacía de Gemini:', data)
       throw new Error('RESPUESTA_VACIA')
     }
 
@@ -90,20 +56,34 @@ async function callGeminiAPI(prompt: string): Promise<string> {
     
   } catch (error: any) {
     clearTimeout(timeoutId)
-    
-    if (error.name === 'AbortError') {
-      throw new Error('TIMEOUT')
-    }
-    
     throw error
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, history, userId } = await req.json()
+    const { message, history, userId: bodyUserId } = await req.json()
+    
+    // CORRECCIÓN: Obtener userId de múltiples fuentes
+    let userId = bodyUserId
+    
+    // Si no viene en el body, intentar obtener de la sesión de Supabase
+    if (!userId) {
+      const supabase = await createClient()
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      if (userError || !user) {
+        console.error('Error getting user from session:', userError)
+        return NextResponse.json({ 
+          error: 'No autorizado',
+          reply: 'Por favor, inicia sesión nuevamente para continuar.'
+        }, { status: 401 })
+      }
+      
+      userId = user.id
+      console.log('UserId obtenido de sesión:', userId)
+    }
 
-    // Validaciones básicas
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ 
         error: 'Mensaje inválido',
@@ -111,33 +91,20 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    if (!userId) {
-      return NextResponse.json({ 
-        error: 'Usuario no identificado',
-        reply: 'Error de autenticación. Por favor, recarga la página.'
-      }, { status: 401 })
-    }
-
-    // Get admin config for feature toggles only (not API key)
+    // Resto del código igual...
     const config = await getAdminConfig()
 
-    // Check chat limits if enabled
     if (config?.chatLimitsEnabled) {
       const supabase = await createClient()
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('subscription_plan')
         .eq('id', userId)
         .single()
 
-      if (profileError) {
-        console.error('Error fetching profile:', profileError)
-      }
-
       const plan = profile?.subscription_plan || 'free'
       const limits = SUBSCRIPTION_LIMITS[plan]
       
-      // Check daily chat requests
       const { data: usage } = await supabase
         .from('user_usage')
         .select('chatRequestsUsedToday, lastChatReset')
@@ -151,12 +118,11 @@ export async function POST(req: NextRequest) {
       if (chatUsed >= limits.chatRequestsPerDay) {
         return NextResponse.json({
           error: 'Limite alcanzado',
-          reply: `✨ Has alcanzado tu límite de ${limits.chatRequestsPerDay} mensajes por día.\n\n🚀 Actualiza a Pro o Ultra para más mensajes.`,
+          reply: `✨ Has alcanzado tu límite de ${limits.chatRequestsPerDay} mensajes por día.`,
           limitExceeded: true
         }, { status: 200 })
       }
 
-      // Update usage
       await supabase
         .from('user_usage')
         .upsert({
@@ -166,7 +132,6 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    // Construir historial de conversación
     const conversationHistory = history && Array.isArray(history) 
       ? history.map((msg: { role: string; content: string }) =>
           `${msg.role === 'user' ? 'Usuario' : 'Asistente'}: ${msg.content}`
@@ -182,54 +147,27 @@ Usuario: ${message}
 
 Responde como Asistente:`
 
-    // Llamar a Gemini con manejo de errores
     let reply: string
     
     try {
       reply = await callGeminiAPI(prompt)
-      console.log('Gemini response successful, length:', reply.length)
     } catch (apiError: any) {
       console.error('Gemini API error:', apiError)
-      
-      // Manejar diferentes tipos de errores
-      if (apiError.message === 'API_KEY_INVALIDA') {
-        reply = '⚠️ Error de configuración del asistente. Por favor, contacta al administrador.'
-      } else if (apiError.message === 'LIMITE_EXCEDIDO') {
-        reply = '📊 El servicio de IA está saturado. Por favor, intenta de nuevo en unos minutos.'
-      } else if (apiError.message === 'TIMEOUT') {
-        reply = '⏱️ El servicio de IA tardó demasiado en responder. Por favor, intenta de nuevo.'
-      } else if (apiError.message === 'RESPUESTA_VACIA') {
-        reply = '🤔 El asistente no pudo generar una respuesta. Por favor, reformula tu pregunta.'
-      } else if (apiError.message === 'MODELO_NO_ENCONTRADO') {
-        reply = '🔧 El servicio de IA está actualizándose. Por favor, intenta de nuevo en unos minutos.'
-      } else {
-        reply = '💬 Lo siento, no pude procesar tu mensaje. Por favor, intenta de nuevo en unos momentos.'
-      }
-      
-      return NextResponse.json({ 
-        reply, 
-        success: true,
-        error: apiError.message 
-      })
+      reply = '💬 Lo siento, no pude procesar tu mensaje. Por favor, intenta de nuevo.'
     }
 
-    // Verificar que la respuesta no esté vacía
     if (!reply || reply.trim() === '') {
       reply = '💬 No pude generar una respuesta en este momento. ¿Podrías reformular tu pregunta?'
     }
 
-    return NextResponse.json({ 
-      reply, 
-      success: true 
-    })
+    return NextResponse.json({ reply, success: true })
 
   } catch (error: any) {
     console.error('[Chat API] Error fatal:', error)
     
     return NextResponse.json({
       success: false,
-      error: 'Error interno',
-      reply: '🔌 Lo siento, hubo un problema de conexión. Por favor, intenta de nuevo en unos segundos.'
+      reply: '🔌 Lo siento, hubo un problema. Por favor, intenta de nuevo.'
     }, { status: 500 })
   }
 }
