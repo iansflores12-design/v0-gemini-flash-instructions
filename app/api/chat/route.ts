@@ -7,35 +7,49 @@ import { SUBSCRIPTION_LIMITS } from '@/lib/types'
 const GEMINI_API_KEY = 'AIzaSyBthuQfIIQ2SQJtar_uslJiGoWqAr7UeCw'
 
 async function callGeminiAPI(prompt: string): Promise<string> {
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [{
-        role: 'user',
-        parts: [{ text: prompt }]
-      }],
-      generationConfig: {
-        maxOutputTokens: 500,
-        temperature: 0.7,
-        topP: 0.9,
-      }
-    }),
-  })
+  try {
+    // CORRECCIÓN: Usar el nombre correcto del modelo
+    // "gemini-1.5-flash" es más estable que "gemini-flash-latest"
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          role: 'user',
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          maxOutputTokens: 500,
+          temperature: 0.7,
+          topP: 0.9,
+        }
+      }),
+    })
 
-  if (!response.ok) {
-    const errorData = await response.json()
-    throw new Error(`Gemini API error: ${JSON.stringify(errorData)}`)
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error('Gemini API error response:', errorData)
+      throw new Error(`Gemini API error: ${response.status} - ${JSON.stringify(errorData)}`)
+    }
+
+    const data = await response.json()
+    
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      console.error('Invalid Gemini response structure:', data)
+      throw new Error('Empty response from Gemini API')
+    }
+
+    return data.candidates[0].content.parts[0].text
+  } catch (fetchError) {
+    // CORRECCIÓN: Manejar específicamente errores de fetch/red
+    if (fetchError instanceof TypeError && fetchError.message.includes('fetch')) {
+      console.error('Network error calling Gemini API:', fetchError)
+      throw new Error('No se pudo conectar con el servicio de IA. Verifica tu conexión a internet.')
+    }
+    throw fetchError
   }
-
-  const data = await response.json()
-  if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-    throw new Error('Empty response from Gemini API')
-  }
-
-  return data.candidates[0].content.parts[0].text
 }
 
 export async function POST(req: NextRequest) {
@@ -109,9 +123,25 @@ Responde como Asistente:`
 
   } catch (error) {
     console.error('[v0] Chat error:', error)
+    
+    // CORRECCIÓN: Devolver mensajes de error más descriptivos
+    let errorMessage = 'Ocurrió un error al conectar con la IA. Por favor intenta de nuevo.'
+    
+    if (error instanceof Error) {
+      if (error.message.includes('fetch') || error.message.includes('network')) {
+        errorMessage = 'Error de conexión: No se pudo contactar al servicio de IA. Verifica tu conexión.'
+      } else if (error.message.includes('API key') || error.message.includes('auth')) {
+        errorMessage = 'Error de autenticación con el servicio de IA.'
+      } else if (error.message.includes('model')) {
+        errorMessage = 'Error con el modelo de IA. Contacta al administrador.'
+      } else {
+        errorMessage = error.message
+      }
+    }
+    
     return NextResponse.json({
       error: 'Error interno',
-      reply: 'Ocurrio un error al conectar con la IA. Por favor intenta de nuevo.'
+      reply: errorMessage
     }, { status: 500 })
   }
 }
