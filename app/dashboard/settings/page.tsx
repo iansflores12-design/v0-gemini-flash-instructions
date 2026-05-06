@@ -113,13 +113,13 @@ export default function SettingsPage() {
                     className={cn(
                       'p-5 rounded-[1.75rem] border text-left shadow-sm transition-all duration-200',
                       darkMode === mode
-                        ? 'border-primary bg-primary/10 ring-2 ring-primary/25'
-                        : 'border-border/80 bg-card hover:border-primary/35 hover:shadow-md'
+                        ? 'border-outline-variant bg-muted/70 ring-1 ring-primary/18'
+                        : 'border-border/80 bg-card hover:border-primary/25 hover:shadow-md'
                     )}
                   >
                     <div className="flex items-start justify-between text-foreground capitalize">
                       {mode}
-                      {darkMode === mode && <Check className="w-4 h-4 text-primary" />}
+                      {darkMode === mode && <Check className="w-4 h-4 text-primary/85" />}
                     </div>
                   </button>
                 ))}
@@ -137,8 +137,8 @@ export default function SettingsPage() {
                     className={cn(
                       'p-5 rounded-[1.75rem] border text-left shadow-sm transition-all duration-200',
                       theme?.id === t.id
-                        ? 'border-primary bg-primary/10 ring-2 ring-primary/25'
-                        : 'border-border/80 bg-card hover:border-primary/30 hover:shadow-md'
+                        ? 'border-outline-variant bg-muted/70 ring-1 ring-primary/18'
+                        : 'border-border/80 bg-card hover:border-primary/25 hover:shadow-md'
                     )}
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -146,7 +146,7 @@ export default function SettingsPage() {
                         <h3 className="font-semibold text-foreground">{t.name}</h3>
                         <p className="text-xs text-muted-foreground mt-1">{t.description}</p>
                       </div>
-                      {theme?.id === t.id && <Check className="w-4 h-4 text-primary" />}
+                      {theme?.id === t.id && <Check className="w-4 h-4 text-primary/85" />}
                     </div>
                     <div className="flex gap-2">
                       {Object.values(t.preview || {}).slice(0, 3).map((color, i) => (
@@ -178,7 +178,7 @@ export default function SettingsPage() {
                         onClick={() => handleColorChange(c)}
                         className={cn(
                           "w-10 h-10 rounded-full border-2 transition-all hover:scale-110",
-                          activeCustomColor === c ? "border-primary ring-2 ring-primary/20" : "border-transparent"
+                          activeCustomColor === c ? "border-outline-variant ring-1 ring-primary/18" : "border-transparent"
                         )}
                         style={{ backgroundColor: c }}
                       />
