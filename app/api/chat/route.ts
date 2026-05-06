@@ -3,52 +3,99 @@ import { createClient } from '@/lib/supabase/server'
 import { getAdminConfig } from '@/lib/admin-config'
 import { SUBSCRIPTION_LIMITS } from '@/lib/types'
 
-// Global Gemini API Key - used for all users
-const GEMINI_API_KEY = 'AIzaSyBthuQfIIQ2SQJtar_uslJiGoWqAr7UeCw'
+// Global Gemini API Key - Updated
+const GEMINI_API_KEY = 'AIzaSyAoiN0VsY3AjLhyZZg08Y9Dnp7052h8TIY'
 
 async function callGeminiAPI(prompt: string): Promise<string> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+
   try {
-    // CORRECCIÓN: Usar el nombre correcto del modelo
-    // "gemini-1.5-flash" es más estable que "gemini-flash-latest"
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          role: 'user',
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          maxOutputTokens: 500,
-          temperature: 0.7,
-          topP: 0.9,
+    // Probar primero con gemini-1.5-flash (más nuevo)
+    let response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            role: 'user',
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            maxOutputTokens: 500,
+            temperature: 0.7,
+            topP: 0.9,
+          }
+        }),
+        signal: controller.signal
+      }
+    )
+
+    // Si falla con 404, intentar con gemini-pro
+    if (response.status === 404) {
+      console.log('Modelo gemini-1.5-flash no disponible, usando gemini-pro')
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              role: 'user',
+              parts: [{ text: prompt }]
+            }],
+            generationConfig: {
+              maxOutputTokens: 500,
+              temperature: 0.7,
+              topP: 0.9,
+            }
+          }),
+          signal: controller.signal
         }
-      }),
-    })
+      )
+    }
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
-      const errorData = await response.json()
-      console.error('Gemini API error response:', errorData)
-      throw new Error(`Gemini API error: ${response.status} - ${JSON.stringify(errorData)}`)
+      const errorText = await response.text()
+      console.error('Gemini API error:', response.status, errorText)
+      
+      if (response.status === 403 || response.status === 401) {
+        throw new Error('API_KEY_INVALIDA')
+      } else if (response.status === 429) {
+        throw new Error('LIMITE_EXCEDIDO')
+      } else if (response.status === 404) {
+        throw new Error('MODELO_NO_ENCONTRADO')
+      } else {
+        throw new Error(`API_ERROR_${response.status}`)
+      }
     }
 
     const data = await response.json()
     
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      console.error('Invalid Gemini response structure:', data)
-      throw new Error('Empty response from Gemini API')
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text
+    
+    if (!reply || reply.trim() === '') {
+      console.error('Respuesta vacía de Gemini:', data)
+      throw new Error('RESPUESTA_VACIA')
     }
 
-    return data.candidates[0].content.parts[0].text
-  } catch (fetchError) {
-    // CORRECCIÓN: Manejar específicamente errores de fetch/red
-    if (fetchError instanceof TypeError && fetchError.message.includes('fetch')) {
-      console.error('Network error calling Gemini API:', fetchError)
-      throw new Error('No se pudo conectar con el servicio de IA. Verifica tu conexión a internet.')
+    return reply.trim()
+    
+  } catch (error: any) {
+    clearTimeout(timeoutId)
+    
+    if (error.name === 'AbortError') {
+      throw new Error('TIMEOUT')
     }
-    throw fetchError
+    
+    throw error
   }
 }
 
@@ -56,8 +103,19 @@ export async function POST(req: NextRequest) {
   try {
     const { message, history, userId } = await req.json()
 
-    if (!message || !userId) {
-      return NextResponse.json({ error: 'Mensaje y userId requeridos' }, { status: 400 })
+    // Validaciones básicas
+    if (!message || typeof message !== 'string') {
+      return NextResponse.json({ 
+        error: 'Mensaje inválido',
+        reply: 'Por favor, escribe un mensaje válido.'
+      }, { status: 400 })
+    }
+
+    if (!userId) {
+      return NextResponse.json({ 
+        error: 'Usuario no identificado',
+        reply: 'Error de autenticación. Por favor, recarga la página.'
+      }, { status: 401 })
     }
 
     // Get admin config for feature toggles only (not API key)
@@ -66,11 +124,15 @@ export async function POST(req: NextRequest) {
     // Check chat limits if enabled
     if (config?.chatLimitsEnabled) {
       const supabase = await createClient()
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('subscription_plan')
         .eq('id', userId)
         .single()
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError)
+      }
 
       const plan = profile?.subscription_plan || 'free'
       const limits = SUBSCRIPTION_LIMITS[plan]
@@ -89,9 +151,9 @@ export async function POST(req: NextRequest) {
       if (chatUsed >= limits.chatRequestsPerDay) {
         return NextResponse.json({
           error: 'Limite alcanzado',
-          reply: `Has alcanzado tu limite de ${limits.chatRequestsPerDay} mensajes por dia. Actualiza a Pro o Ultra para mas.`,
+          reply: `✨ Has alcanzado tu límite de ${limits.chatRequestsPerDay} mensajes por día.\n\n🚀 Actualiza a Pro o Ultra para más mensajes.`,
           limitExceeded: true
-        }, { status: 429 })
+        }, { status: 200 })
       }
 
       // Update usage
@@ -104,44 +166,70 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    const conversationHistory = history?.map((msg: { role: string; content: string }) =>
-      `${msg.role === 'user' ? 'Usuario' : 'Asistente'}: ${msg.content}`
-    ).join('\n') || ''
+    // Construir historial de conversación
+    const conversationHistory = history && Array.isArray(history) 
+      ? history.map((msg: { role: string; content: string }) =>
+          `${msg.role === 'user' ? 'Usuario' : 'Asistente'}: ${msg.content}`
+        ).join('\n')
+      : ''
 
-    const prompt = `Eres ClearGrade AI, un asistente de estudio amigable para estudiantes hispanohablantes. Ayudas con tareas, organizacion y dudas academicas. Responde en espanol de forma clara y concisa.
+    const prompt = `Eres ClearGrade AI, un asistente de estudio amigable para estudiantes hispanohablantes. Ayudas con tareas, organización y dudas académicas. Responde en español de forma clara y concisa.
 
-Historial de conversacion:
-${conversationHistory}
+Historial de conversación:
+${conversationHistory || '(No hay historial previo)'}
 
 Usuario: ${message}
 
 Responde como Asistente:`
 
-    const reply = await callGeminiAPI(prompt)
-
-    return NextResponse.json({ reply, success: true })
-
-  } catch (error) {
-    console.error('[v0] Chat error:', error)
+    // Llamar a Gemini con manejo de errores
+    let reply: string
     
-    // CORRECCIÓN: Devolver mensajes de error más descriptivos
-    let errorMessage = 'Ocurrió un error al conectar con la IA. Por favor intenta de nuevo.'
-    
-    if (error instanceof Error) {
-      if (error.message.includes('fetch') || error.message.includes('network')) {
-        errorMessage = 'Error de conexión: No se pudo contactar al servicio de IA. Verifica tu conexión.'
-      } else if (error.message.includes('API key') || error.message.includes('auth')) {
-        errorMessage = 'Error de autenticación con el servicio de IA.'
-      } else if (error.message.includes('model')) {
-        errorMessage = 'Error con el modelo de IA. Contacta al administrador.'
+    try {
+      reply = await callGeminiAPI(prompt)
+      console.log('Gemini response successful, length:', reply.length)
+    } catch (apiError: any) {
+      console.error('Gemini API error:', apiError)
+      
+      // Manejar diferentes tipos de errores
+      if (apiError.message === 'API_KEY_INVALIDA') {
+        reply = '⚠️ Error de configuración del asistente. Por favor, contacta al administrador.'
+      } else if (apiError.message === 'LIMITE_EXCEDIDO') {
+        reply = '📊 El servicio de IA está saturado. Por favor, intenta de nuevo en unos minutos.'
+      } else if (apiError.message === 'TIMEOUT') {
+        reply = '⏱️ El servicio de IA tardó demasiado en responder. Por favor, intenta de nuevo.'
+      } else if (apiError.message === 'RESPUESTA_VACIA') {
+        reply = '🤔 El asistente no pudo generar una respuesta. Por favor, reformula tu pregunta.'
+      } else if (apiError.message === 'MODELO_NO_ENCONTRADO') {
+        reply = '🔧 El servicio de IA está actualizándose. Por favor, intenta de nuevo en unos minutos.'
       } else {
-        errorMessage = error.message
+        reply = '💬 Lo siento, no pude procesar tu mensaje. Por favor, intenta de nuevo en unos momentos.'
       }
+      
+      return NextResponse.json({ 
+        reply, 
+        success: true,
+        error: apiError.message 
+      })
     }
+
+    // Verificar que la respuesta no esté vacía
+    if (!reply || reply.trim() === '') {
+      reply = '💬 No pude generar una respuesta en este momento. ¿Podrías reformular tu pregunta?'
+    }
+
+    return NextResponse.json({ 
+      reply, 
+      success: true 
+    })
+
+  } catch (error: any) {
+    console.error('[Chat API] Error fatal:', error)
     
     return NextResponse.json({
+      success: false,
       error: 'Error interno',
-      reply: errorMessage
+      reply: '🔌 Lo siento, hubo un problema de conexión. Por favor, intenta de nuevo en unos segundos.'
     }, { status: 500 })
   }
 }
