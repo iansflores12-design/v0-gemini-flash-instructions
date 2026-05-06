@@ -39,6 +39,19 @@ function resolveIsDark(mode: DarkMode): boolean {
   return typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)').matches : false
 }
 
+/** Acento tipo paleta tonal M3: baja el croma del picker para evitar verdes/limas chillones. */
+function cssTonalPrimary(pick: string, isDark: boolean): string {
+  const probe = `oklch(from ${pick} l c h)`
+  if (typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('color', probe)) {
+    return isDark
+      ? `oklch(from ${pick} clamp(0.56, calc(l + 0.12), 0.76) clamp(0.045, calc(c * 0.44), 0.11) h)`
+      : `oklch(from ${pick} clamp(0.36, calc(l * 0.9), 0.5) clamp(0.05, calc(c * 0.38), 0.1) h)`
+  }
+  return isDark
+    ? `color-mix(in srgb, ${pick} 58%, rgb(168, 175, 168))`
+    : `color-mix(in srgb, ${pick} 48%, rgb(48, 52, 48))`
+}
+
 function applyTokens(theme: Theme, isDark: boolean, customColor: string | null) {
   if (typeof document === 'undefined') return
   
@@ -53,69 +66,73 @@ function applyTokens(theme: Theme, isDark: boolean, customColor: string | null) 
     root.style.setProperty(prop, value)
   })
 
-  // 3. EXTERMINADOR DE VERDE: Inyección de Color Personalizado
+  // 3. Color personalizado Material 3: primario tonal (no el hex crudo del picker)
   if (customColor && theme.id === 'm3e') {
-    // Color principal y foco
-    root.style.setProperty('--primary', customColor)
-    root.style.setProperty('--ring', customColor)
-    
-    // Contraste de texto automático
+    const tonal = cssTonalPrimary(customColor, isDark)
+
+    root.style.setProperty('--primary', tonal)
+    root.style.setProperty('--ring', tonal)
+
     root.style.setProperty('--primary-foreground', isDark ? '#ffffff' : '#000000')
-    
-    // Matamos el verde en burbujas de iconos, chips de semanas y hovers
-    // Usamos el color custom con diferentes niveles de transparencia hex
-    root.style.setProperty('--muted', `${customColor}20`)      // 12% opacidad (Chips y fondos de iconos)
-    root.style.setProperty('--secondary', `${customColor}15`)  // 8% opacidad
-    root.style.setProperty('--accent', `${customColor}30`)     // 18% opacidad (Hovers)
-    root.style.setProperty('--border', `${customColor}45`)     // 27% opacidad (Bordes de tarjetas)
 
-    // Superficies M3 (drop zone PDF, inputs): sin esto quedan en el verde fijo de globals.css
-    if (isDark) {
-      root.style.setProperty(
-        '--surface-container',
-        `color-mix(in srgb, ${customColor} 16%, rgb(12, 16, 10))`
-      )
-      root.style.setProperty(
-        '--surface-container-high',
-        `color-mix(in srgb, ${customColor} 18%, rgb(14, 18, 12))`
-      )
-      root.style.setProperty(
-        '--surface-container-highest',
-        `color-mix(in srgb, ${customColor} 20%, rgb(16, 20, 14))`
-      )
-      root.style.setProperty(
-        '--outline-variant',
-        `color-mix(in srgb, ${customColor} 22%, rgb(38, 42, 36))`
-      )
-    } else {
-      root.style.setProperty(
-        '--surface-container',
-        `color-mix(in srgb, ${customColor} 6%, rgb(255, 255, 255))`
-      )
-      root.style.setProperty(
-        '--surface-container-high',
-        `color-mix(in srgb, ${customColor} 8%, rgb(255, 255, 255))`
-      )
-      root.style.setProperty(
-        '--surface-container-highest',
-        `color-mix(in srgb, ${customColor} 10%, rgb(255, 255, 255))`
-      )
-      root.style.setProperty(
-        '--outline-variant',
-        `color-mix(in srgb, ${customColor} 18%, rgb(224, 226, 222))`
-      )
-    }
+    root.style.setProperty(
+      '--muted',
+      isDark
+        ? `color-mix(in oklch, ${tonal} 14%, oklch(0.16 0.02 none))`
+        : `color-mix(in oklch, ${tonal} 12%, oklch(0.97 0.006 none))`
+    )
+    root.style.setProperty(
+      '--secondary',
+      isDark
+        ? `color-mix(in oklch, ${tonal} 11%, oklch(0.14 0.02 none))`
+        : `color-mix(in oklch, ${tonal} 9%, oklch(0.94 0.01 none))`
+    )
+    root.style.setProperty(
+      '--accent',
+      isDark
+        ? `color-mix(in oklch, ${tonal} 20%, oklch(0.2 0.02 none))`
+        : `color-mix(in oklch, ${tonal} 16%, oklch(0.96 0.01 none))`
+    )
+    root.style.setProperty(
+      '--border',
+      isDark
+        ? `color-mix(in oklch, ${tonal} 26%, oklch(0.28 0.025 none))`
+        : `color-mix(in oklch, ${tonal} 20%, oklch(0.88 0.015 none))`
+    )
 
-    // Fondos opacos: los sufijos hex tipo #rrggbb05 (~2% alpha) dejaban el body casi
-    // transparente y se veía el canvas claro del navegador (modo oscuro “lavado”).
+    // Fondos opacos + superficies M3: mezcla con tonal para tintes menos saturados
     if (isDark) {
       root.style.setProperty(
         '--background',
-        `color-mix(in srgb, ${customColor} 14%, rgb(9, 12, 7))`
+        `color-mix(in srgb, ${tonal} 9%, rgb(5, 7, 6))`
       )
       root.style.setProperty(
         '--card',
-        `color-mix(in srgb, ${customColor} 12%, rgb(16, 20, 12))`
+        `color-mix(in srgb, ${tonal} 17%, rgb(26, 30, 28))`
+      )
+      root.style.setProperty(
+        '--popover',
+        `color-mix(in srgb, ${tonal} 17%, rgb(26, 30, 28))`
+      )
+      root.style.setProperty(
+        '--surface-container',
+        `color-mix(in srgb, ${tonal} 19%, rgb(32, 36, 34))`
+      )
+      root.style.setProperty(
+        '--surface-container-high',
+        `color-mix(in srgb, ${tonal} 21%, rgb(38, 42, 40))`
+      )
+      root.style.setProperty(
+        '--surface-container-highest',
+        `color-mix(in srgb, ${tonal} 25%, rgb(44, 48, 46))`
+      )
+      root.style.setProperty(
+        '--outline-variant',
+        `color-mix(in srgb, ${tonal} 38%, rgb(66, 70, 68))`
+      )
+      root.style.setProperty(
+        '--input',
+        `color-mix(in srgb, ${tonal} 13%, rgb(18, 20, 19))`
       )
       root.style.setProperty('--foreground', 'oklch(0.96 0.006 none)')
       root.style.setProperty('--muted-foreground', 'oklch(0.72 0.012 none)')
@@ -126,9 +143,26 @@ function applyTokens(theme: Theme, isDark: boolean, customColor: string | null) 
     } else {
       root.style.setProperty(
         '--background',
-        `color-mix(in srgb, ${customColor} 10%, rgb(252, 253, 250))`
+        `color-mix(in srgb, ${tonal} 10%, rgb(252, 253, 250))`
       )
       root.style.setProperty('--card', '#ffffff')
+      root.style.setProperty('--popover', '#ffffff')
+      root.style.setProperty(
+        '--surface-container',
+        `color-mix(in srgb, ${tonal} 7%, rgb(255, 255, 255))`
+      )
+      root.style.setProperty(
+        '--surface-container-high',
+        `color-mix(in srgb, ${tonal} 9%, rgb(255, 255, 255))`
+      )
+      root.style.setProperty(
+        '--surface-container-highest',
+        `color-mix(in srgb, ${tonal} 11%, rgb(255, 255, 255))`
+      )
+      root.style.setProperty(
+        '--outline-variant',
+        `color-mix(in srgb, ${tonal} 18%, rgb(218, 220, 216))`
+      )
       root.style.setProperty('--foreground', 'oklch(0.14 0.008 none)')
       root.style.setProperty('--muted-foreground', 'oklch(0.48 0.015 none)')
       root.style.setProperty('--card-foreground', 'oklch(0.14 0.008 none)')
