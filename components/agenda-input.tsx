@@ -57,6 +57,7 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
   const [error, setError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [fromCache, setFromCache] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   // Request notification permission on mount (for mobile)
@@ -127,6 +128,7 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
       
       const data = await response.json()
       setParsedTasks(data.tasks || [])
+      setFromCache(!!data.fromCache)
       
       if (!data.tasks || data.tasks.length === 0) {
         setError('No se encontraron tareas en el documento. Intenta con otro archivo.')
@@ -308,12 +310,17 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
               <div className="w-10 h-10 rounded-2xl bg-accent/20 flex items-center justify-center">
                 <Check className="w-5 h-5 text-accent" />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="font-semibold text-foreground">
                   {parsedTasks.length} {parsedTasks.length === 1 ? 'tarea encontrada' : 'tareas encontradas'}
                 </p>
                 <p className="text-sm text-muted-foreground">Revisa antes de guardar</p>
               </div>
+              {fromCache && (
+                <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                  Desde cache
+                </span>
+              )}
             </div>
             
             <div className="space-y-3">
@@ -380,6 +387,7 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
                 setParsedTasks([])
                 setSelectedFile(null)
                 setError(null)
+                setFromCache(false)
               }}
               className="flex-1 h-14 rounded-2xl border-2 font-medium"
             >

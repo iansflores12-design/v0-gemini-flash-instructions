@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import mammoth from 'mammoth'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { createClient } from '@supabase/supabase-js'
+import crypto from 'crypto'
 
 const GEMINI_API_KEY = 'AIzaSyBthuQfIIQ2SQJtar_uslJiGoWqAr7UeCw'
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
+
+// Supabase client for cache
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 // Dynamically import pdf-parse
 let pdf: any
@@ -11,6 +19,68 @@ try {
   pdf = require('pdf-parse/lib/pdf-parse')
 } catch {
   pdf = null
+}
+
+// Generate hash of file content
+function generateFileHash(buffer: Buffer): string {
+  return crypto.createHash('sha256').update(buffer).digest('hex')
+}
+
+// Check cache for existing processed agenda
+async function checkCache(fileHash: string) {
+  try {
+    const { data, error } = await supabase
+      .from('cached_agendas')
+      .select('*')
+      .eq('file_hash', fileHash)
+      .single()
+    
+    if (data && !error) {
+      // Update usage stats
+      await supabase
+        .from('cached_agendas')
+        .update({ 
+          used_count: (data.used_count || 0) + 1,
+          last_used_at: new Date().toISOString()
+        })
+        .eq('id', data.id)
+      
+      console.log('[v0] Cache HIT - returning cached agenda')
+      return data.tasks_json
+    }
+  } catch (e) {
+    console.log('[v0] Cache check error:', e)
+  }
+  return null
+}
+
+// Save to cache with metadata extracted by AI
+async function saveToCache(
+  fileHash: string, 
+  fileName: string,
+  tasks: any[], 
+  metadata: { school?: string; grade?: string; section?: string; year?: number; partial?: number; week?: number; subject?: string }
+) {
+  try {
+    await supabase
+      .from('cached_agendas')
+      .upsert({
+        file_hash: fileHash,
+        file_name: fileName,
+        tasks_json: { tasks },
+        school_name: metadata.school || null,
+        grade: metadata.grade || null,
+        section: metadata.section || null,
+        year: metadata.year || null,
+        partial: metadata.partial || null,
+        week_number: metadata.week || null,
+        subject: metadata.subject || null,
+      }, { onConflict: 'file_hash' })
+    
+    console.log('[v0] Agenda cached successfully')
+  } catch (e) {
+    console.log('[v0] Cache save error:', e)
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -35,12 +105,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Solo se permiten archivos PDF o DOCX' }, { status: 400 })
     }
 
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    const fileHash = generateFileHash(buffer)
+
+    // Check cache first
+    const cachedResult = await checkCache(fileHash)
+    if (cachedResult) {
+      return NextResponse.json({ ...cachedResult, fromCache: true })
+    }
+
     // For PDFs, use Gemini's native PDF support
     if (isPDF) {
       try {
-        const arrayBuffer = await file.arrayBuffer()
-        const base64PDF = Buffer.from(arrayBuffer).toString('base64')
-
+        const base64PDF = buffer.toString('base64')
         const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
 
         const prompt = `Eres un asistente experto que extrae tareas de agendas escolares. Analiza este PDF y extrae TODAS las tareas, trabajos, examenes, proyectos y actividades mencionadas.
@@ -56,8 +134,17 @@ INSTRUCCIONES IMPORTANTES:
 8. La descripcion debe incluir las instrucciones detalladas de la tarea
 9. Los materiales son los items necesarios listados (Notebook, Computer, Glue, etc.)
 
+ADEMAS, extrae la siguiente METADATA del documento (busca en encabezados, titulos, etc.):
+- school: Nombre del colegio/escuela
+- grade: Grado (ej: "7mo", "8vo", "9no", "10mo")
+- section: Seccion (ej: "A", "B", "C")
+- year: Año escolar (ej: 2026)
+- partial: Numero de parcial (1, 2, 3, 4)
+- week: Numero de semana si aplica (ej: 1, 2, 3)
+- subject: Materia principal del documento
+
 RESPONDE SOLO CON JSON VALIDO (sin explicaciones, sin markdown):
-{"tasks":[{"title":"Nombre exacto de la actividad","subject":"Nombre de la materia","due_date":"YYYY-MM-DD","description":"Instrucciones completas","value":"Porcentaje o puntos totales","materials":[{"name":"Material","quantity":"1"}]}]}`
+{"metadata":{"school":"","grade":"","section":"","year":2026,"partial":null,"week":null,"subject":""},"tasks":[{"title":"Nombre exacto de la actividad","subject":"Nombre de la materia","due_date":"YYYY-MM-DD","description":"Instrucciones completas","value":"Porcentaje o puntos totales","materials":[{"name":"Material","quantity":"1"}]}]}`
 
         const result = await model.generateContent([
           prompt,
@@ -75,7 +162,19 @@ RESPONDE SOLO CON JSON VALIDO (sin explicaciones, sin markdown):
           try {
             const parsed = JSON.parse(jsonMatch[0])
             if (parsed.tasks && Array.isArray(parsed.tasks)) {
-              return NextResponse.json(parsed)
+              // Save to cache with metadata
+              const meta = parsed.metadata || {}
+              await saveToCache(fileHash, file.name, parsed.tasks, {
+                school: meta.school,
+                grade: meta.grade,
+                section: meta.section,
+                year: meta.year,
+                partial: meta.partial,
+                week: meta.week,
+                subject: meta.subject
+              })
+              
+              return NextResponse.json({ tasks: parsed.tasks })
             }
           } catch (e) {
             console.error('[v0] JSON parse error:', e)
@@ -84,8 +183,8 @@ RESPONDE SOLO CON JSON VALIDO (sin explicaciones, sin markdown):
 
         // If Gemini didn't return valid JSON, try fallback
         if (pdf) {
-          const data = await pdf(Buffer.from(arrayBuffer))
-          return await processTextWithGemini(data.text)
+          const data = await pdf(buffer)
+          return await processTextWithGemini(data.text, fileHash, file.name)
         }
 
         return NextResponse.json({ tasks: [], raw: responseText })
@@ -97,10 +196,8 @@ RESPONDE SOLO CON JSON VALIDO (sin explicaciones, sin markdown):
 
     // For DOCX files
     if (isDOCX) {
-      const arrayBuffer = await file.arrayBuffer()
-      const buffer = Buffer.from(arrayBuffer)
       const result = await mammoth.extractRawText({ buffer })
-      return await processTextWithGemini(result.value)
+      return await processTextWithGemini(result.value, fileHash, file.name)
     }
 
     return NextResponse.json({ tasks: [] })
@@ -123,7 +220,7 @@ function repairJSON(str: string): string {
   return str
 }
 
-async function processTextWithGemini(extractedText: string) {
+async function processTextWithGemini(extractedText: string, fileHash: string, fileName: string) {
   const truncatedText = extractedText.substring(0, 8000) || 'No se pudo extraer texto'
   console.log('[v0] Text length:', truncatedText.length)
 
@@ -142,8 +239,17 @@ INSTRUCCIONES IMPORTANTES:
 7. La descripcion debe incluir TODAS las instrucciones de la tarea
 8. Los materiales son los items necesarios (Notebook, Computer, Glue, Scissors, etc.)
 
+ADEMAS, extrae la siguiente METADATA del documento:
+- school: Nombre del colegio/escuela
+- grade: Grado (ej: "7mo", "8vo", "9no")
+- section: Seccion (ej: "A", "B", "C")
+- year: Año escolar (2026)
+- partial: Numero de parcial (1, 2, 3, 4)
+- week: Numero de semana si aplica
+- subject: Materia principal
+
 RESPONDE SOLO CON JSON VALIDO (sin markdown, sin backticks):
-{"tasks":[{"title":"Nombre exacto","subject":"Materia","due_date":"YYYY-MM-DD","description":"Instrucciones completas","value":"Porcentaje total","materials":[{"name":"Material"}]}]}`
+{"metadata":{"school":"","grade":"","section":"","year":2026,"partial":null,"week":null,"subject":""},"tasks":[{"title":"Nombre exacto","subject":"Materia","due_date":"YYYY-MM-DD","description":"Instrucciones completas","value":"Porcentaje total","materials":[{"name":"Material"}]}]}`
 
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
@@ -167,27 +273,27 @@ RESPONDE SOLO CON JSON VALIDO (sin markdown, sin backticks):
     // Try multiple extraction strategies
     let parsed: any = null
     
-    // Strategy 1: Extract JSON array
-    const arrayMatch = cleanedText.match(/\[[\s\S]*\]/)
-    if (arrayMatch) {
+    // Strategy 1: Extract JSON object with tasks
+    const objMatch = cleanedText.match(/\{[\s\S]*"tasks"[\s\S]*\}/)
+    if (objMatch) {
       try {
-        parsed = { tasks: JSON.parse(arrayMatch[0]) }
+        parsed = JSON.parse(objMatch[0])
       } catch {
         try {
-          parsed = { tasks: JSON.parse(repairJSON(arrayMatch[0])) }
+          parsed = JSON.parse(repairJSON(objMatch[0]))
         } catch {}
       }
     }
     
-    // Strategy 2: Extract JSON object with tasks
+    // Strategy 2: Extract JSON array
     if (!parsed) {
-      const objMatch = cleanedText.match(/\{[\s\S]*"tasks"[\s\S]*\}/)
-      if (objMatch) {
+      const arrayMatch = cleanedText.match(/\[[\s\S]*\]/)
+      if (arrayMatch) {
         try {
-          parsed = JSON.parse(objMatch[0])
+          parsed = { tasks: JSON.parse(arrayMatch[0]) }
         } catch {
           try {
-            parsed = JSON.parse(repairJSON(objMatch[0]))
+            parsed = { tasks: JSON.parse(repairJSON(arrayMatch[0])) }
           } catch {}
         }
       }
@@ -219,7 +325,19 @@ RESPONDE SOLO CON JSON VALIDO (sin markdown, sin backticks):
         materials: Array.isArray(task.materials) ? task.materials.filter((m: any) => m.name && m.name.trim()) : []
       }))
       
-      console.log('[v0] Successfully parsed tasks:', validTasks.length)
+      // Save to cache with metadata
+      const meta = parsed.metadata || {}
+      await saveToCache(fileHash, fileName, validTasks, {
+        school: meta.school,
+        grade: meta.grade,
+        section: meta.section,
+        year: meta.year,
+        partial: meta.partial,
+        week: meta.week,
+        subject: meta.subject
+      })
+      
+      console.log('[v0] Successfully parsed and cached tasks:', validTasks.length)
       return NextResponse.json({ tasks: validTasks })
     }
 
