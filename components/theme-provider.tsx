@@ -27,7 +27,10 @@ const ALL_VARS = [
   '--accent', '--accent-foreground',
   '--destructive', '--destructive-foreground',
   '--border', '--input', '--ring', '--radius',
-  '--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5'
+  '--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5',
+  // Limpieza para que no queden superficies M3 del color custom anterior
+  '--surface-container', '--surface-container-high', '--surface-container-highest',
+  '--outline-variant',
 ]
 
 function resolveIsDark(mode: DarkMode): boolean {
@@ -65,6 +68,43 @@ function applyTokens(theme: Theme, isDark: boolean, customColor: string | null) 
     root.style.setProperty('--secondary', `${customColor}15`)  // 8% opacidad
     root.style.setProperty('--accent', `${customColor}30`)     // 18% opacidad (Hovers)
     root.style.setProperty('--border', `${customColor}45`)     // 27% opacidad (Bordes de tarjetas)
+
+    // Superficies M3 (drop zone PDF, inputs): sin esto quedan en el verde fijo de globals.css
+    if (isDark) {
+      root.style.setProperty(
+        '--surface-container',
+        `color-mix(in srgb, ${customColor} 16%, rgb(12, 16, 10))`
+      )
+      root.style.setProperty(
+        '--surface-container-high',
+        `color-mix(in srgb, ${customColor} 18%, rgb(14, 18, 12))`
+      )
+      root.style.setProperty(
+        '--surface-container-highest',
+        `color-mix(in srgb, ${customColor} 20%, rgb(16, 20, 14))`
+      )
+      root.style.setProperty(
+        '--outline-variant',
+        `color-mix(in srgb, ${customColor} 22%, rgb(38, 42, 36))`
+      )
+    } else {
+      root.style.setProperty(
+        '--surface-container',
+        `color-mix(in srgb, ${customColor} 6%, rgb(255, 255, 255))`
+      )
+      root.style.setProperty(
+        '--surface-container-high',
+        `color-mix(in srgb, ${customColor} 8%, rgb(255, 255, 255))`
+      )
+      root.style.setProperty(
+        '--surface-container-highest',
+        `color-mix(in srgb, ${customColor} 10%, rgb(255, 255, 255))`
+      )
+      root.style.setProperty(
+        '--outline-variant',
+        `color-mix(in srgb, ${customColor} 18%, rgb(224, 226, 222))`
+      )
+    }
 
     // Fondos opacos: los sufijos hex tipo #rrggbb05 (~2% alpha) dejaban el body casi
     // transparente y se veía el canvas claro del navegador (modo oscuro “lavado”).
