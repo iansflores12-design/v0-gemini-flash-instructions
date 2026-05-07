@@ -90,7 +90,7 @@ async function callGeminiWithFiles(
   // System context as first user message
   contents.push({
     role: 'user',
-    parts: [{ text: `${userContext}\n\nEres ClearGrade AI, asistente de estudio personalizado. Tienes acceso al contexto del estudiante de arriba. Úsalo para dar respuestas contextualizadas, mencionando tareas específicas o materias cuando sea relevante. Responde siempre en español de forma amigable y concisa.` }]
+    parts: [{ text: `${userContext}\n\nEres ClearGrade AI, asistente de estudio personalizado. Tienes acceso al contexto del estudiante de arriba. Úsalo para dar respuestas contextualizadas, mencionando tareas específicas o materias cuando sea relevante. Responde siempre en español de forma amigable y concisa NO USES * POR NADA DEL MUNDO.` }]
   })
   contents.push({ role: 'model', parts: [{ text: 'Entendido. Tengo acceso a tu información académica y estoy listo para ayudarte.' }] })
 
