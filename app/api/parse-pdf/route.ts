@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
     if (isPDF) {
       try {
         const base64PDF = buffer.toString('base64')
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' })
+        const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' })
 
         const prompt = `Eres un asistente experto que extrae tareas de agendas escolares. Analiza este PDF y extrae TODAS las tareas, trabajos, examenes, proyectos y actividades mencionadas.
 
@@ -252,7 +252,7 @@ RESPONDE SOLO CON JSON VALIDO (sin markdown, sin backticks):
 {"metadata":{"school":"","grade":"","section":"","year":2026,"partial":null,"week":null,"subject":""},"tasks":[{"title":"Nombre exacto","subject":"Materia","due_date":"YYYY-MM-DD","description":"Instrucciones completas","value":"Porcentaje total","materials":[{"name":"Material"}]}]}`
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
