@@ -4,35 +4,32 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
-// ESTRATEGIA DE MASIFICACIÓN: Lista de modelos por prioridad de estabilidad
+// CONFIGURACIÓN DE ESTABILIDAD
+// Usamos modelos de producción para evitar errores 404/503 de versiones "preview" o "lite"
 const MODEL_PRIORITY = [
-  'gemini-2.0-flash-001', // El más moderno y estable en producción
-  'gemini-1.5-flash-002', // Versión específica altamente disponible
+  'gemini-1.5-flash-002', // El más rápido y estable actualmente
   'gemini-1.5-flash',     // Alias general
+  'gemini-2.0-flash-001'  // Backup de nueva generación
 ]
 
-// API KEY PROPORCIONADA POR EL USUARIO
 const GEMINI_API_KEY = "AIzaSyAoiN0VsY3AjLhyZZg08Y9Dnp7052h8TIY"
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
 
-// Configuración de Supabase
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-// Importación dinámica de pdf-parse para evitar errores en ciertos entornos de edge
-let pdf: any
-try {
-  pdf = require('pdf-parse/lib/pdf-parse')
-} catch {
-  pdf = null
-}
-
+/**
+ * Genera un hash único para el archivo para evitar procesar lo mismo dos veces
+ */
 function generateFileHash(buffer: Buffer): string {
   return crypto.createHash('sha256').update(buffer).digest('hex')
 }
 
+/**
+ * Busca en la base de datos si ya procesamos este archivo antes
+ */
 async function checkCache(fileHash: string) {
   try {
     const { data, error } = await supabase
@@ -49,11 +46,14 @@ async function checkCache(fileHash: string) {
       return data.tasks_json
     }
   } catch (e) {
-    console.error('[v0] Cache error:', e)
+    console.error('[v0] Error en caché:', e)
   }
   return null
 }
 
+/**
+ * Guarda el resultado exitoso en caché
+ */
 async function saveToCache(fileHash: string, fileName: string, tasks: any[], metadata: any) {
   try {
     await supabase.from('cached_agendas').upsert({
@@ -67,43 +67,45 @@ async function saveToCache(fileHash: string, fileName: string, tasks: any[], met
       subject: metadata.subject || null,
     }, { onConflict: 'file_hash' })
   } catch (e) {
-    console.error('[v0] Cache save error:', e)
+    console.error('[v0] Error guardando en caché:', e)
   }
 }
 
-async function processDocumentWithGemini(
+/**
+ * Lógica principal de procesamiento con reintentos y limpieza de JSON
+ */
+async function processWithGemini(
   content: { inlineData?: { mimeType: string; data: string }; text?: string },
   isPDF: boolean
 ) {
-  let lastError = null
+  const prompt = `Analiza este documento de agenda escolar y extrae TODAS las tareas, exámenes y proyectos.
+  Es OBLIGATORIO identificar el nombre del Colegio/Escuela en logos o encabezados.
 
-  // PROMPT ORIGINAL PRESERVADO PARA TU USERFLOW
-  const prompt = `Analiza el documento y extrae la información. Es CRÍTICO identificar la INSTITUCIÓN (Colegio/Escuela) en encabezados o logos.
-  
-  Responde ÚNICAMENTE con un JSON válido con este formato exacto:
+  Responde ÚNICAMENTE con un JSON válido con este formato:
   {
     "metadata": {
-      "school": "Nombre del Colegio (BÚSCALO BIEN)",
-      "grade": "grado",
-      "section": "sección",
+      "school": "Nombre del Colegio",
+      "grade": "Grado",
+      "section": "Sección",
       "year": 2026,
       "partial": null,
       "week": null,
-      "subject": "materia"
+      "subject": "Materia principal"
     },
     "tasks": [
       {
-        "title": "Nombre tarea",
+        "title": "Nombre de la tarea",
         "subject": "Materia",
         "due_date": "YYYY-MM-DD",
-        "description": "Instrucciones",
-        "value": "valor",
-        "materials": [{ "name": "material", "quantity": "1" }]
+        "description": "Instrucciones detalladas",
+        "value": "Puntos o %",
+        "materials": [{ "name": "Material", "quantity": "1" }]
       }
     ]
   }`
 
-  // Intento en cascada para asegurar respuesta inmediata
+  let lastError = null
+
   for (const modelName of MODEL_PRIORITY) {
     try {
       const model = genAI.getGenerativeModel({ model: modelName })
@@ -112,28 +114,33 @@ async function processDocumentWithGemini(
       if (isPDF && content.inlineData) {
         parts.push({ inlineData: content.inlineData })
       } else if (content.text) {
-        parts.push({ text: `TEXTO EXTRAÍDO:\n${content.text}` })
+        parts.push({ text: `CONTENIDO DEL DOCUMENTO:\n${content.text}` })
       }
 
       const result = await model.generateContent(parts)
       const responseText = result.response.text()
       
-      // Limpieza de JSON robusta
+      // Limpieza agresiva de la respuesta para obtener solo el JSON
       let cleaned = responseText.trim()
       cleaned = cleaned.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
       
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0])
+        const parsed = JSON.parse(jsonMatch[0])
+        // Validar que tenga la estructura mínima que espera tu sitio
+        if (parsed.tasks && Array.isArray(parsed.tasks)) {
+          return parsed
+        }
       }
     } catch (err: any) {
-      console.warn(`[v0] Fallo con ${modelName}: ${err.message}`)
+      console.warn(`[v0] Falló modelo ${modelName}:`, err.message)
       lastError = err
-      // Si falla por 404, 503 o 429, saltamos al siguiente modelo inmediatamente
-      continue
+      // Si es error de cuota o saturación, intentamos el siguiente modelo
+      if (err.status === 429 || err.status === 503 || err.status === 504 || err.status === 404) continue
+      break 
     }
   }
-  throw lastError || new Error("Saturación total en los servicios de IA")
+  throw lastError || new Error("La IA no pudo generar una respuesta válida")
 }
 
 export async function POST(req: NextRequest) {
@@ -143,15 +150,17 @@ export async function POST(req: NextRequest) {
     const userId = formData.get('userId') as string | null
 
     if (!file || !userId) {
-      return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 })
+      return NextResponse.json({ error: 'Archivo y userId son obligatorios' }, { status: 400 })
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
     const fileHash = generateFileHash(buffer)
 
-    // 1. Verificación de Cache
+    // 1. Intentar obtener de caché (Respuesta instantánea)
     const cached = await checkCache(fileHash)
-    if (cached) return NextResponse.json({ ...cached, fromCache: true })
+    if (cached) {
+      return NextResponse.json({ ...cached, fromCache: true })
+    }
 
     const fileName = file.name.toLowerCase()
     const isPDF = fileName.endsWith('.pdf') || file.type === 'application/pdf'
@@ -159,43 +168,40 @@ export async function POST(req: NextRequest) {
     let resultJSON: any
 
     if (isPDF) {
-      resultJSON = await processDocumentWithGemini(
+      // Uso de soporte nativo de PDF (Gemini Multimodal) - Mucho más inteligente
+      resultJSON = await processWithGemini(
         { inlineData: { mimeType: 'application/pdf', data: buffer.toString('base64') } },
         true
       )
     } else if (fileName.endsWith('.docx')) {
       const docxText = (await mammoth.extractRawText({ buffer })).value
-      resultJSON = await processDocumentWithGemini({ text: docxText }, false)
+      resultJSON = await processWithGemini({ text: docxText }, false)
     } else {
-      return NextResponse.json({ error: 'Formato de archivo no soportado' }, { status: 400 })
+      return NextResponse.json({ error: 'Solo PDF o DOCX' }, { status: 400 })
     }
 
     if (resultJSON) {
-      // Garantizar que el campo school exista para tu frontend
-      if (!resultJSON.metadata) resultJSON.metadata = {}
-      if (!resultJSON.metadata.school || resultJSON.metadata.school === "") {
-        resultJSON.metadata.school = "Institución por identificar"
-      }
+      // Asegurar que metadata no sea nula para evitar errores en el frontend
+      resultJSON.metadata = resultJSON.metadata || {}
+      if (!resultJSON.metadata.school) resultJSON.metadata.school = "Institución no detectada"
 
-      // Guardar en cache para evitar re-procesar
+      // Guardar en caché para la próxima vez
       await saveToCache(fileHash, file.name, resultJSON.tasks, resultJSON.metadata)
       
-      // Respuesta compatible con tu sitio
+      // Retornar el formato exacto que tu sitio ya entiende
       return NextResponse.json({ 
         tasks: resultJSON.tasks, 
         metadata: resultJSON.metadata 
       })
     }
 
-    return NextResponse.json({ error: 'Estructura de datos inválida' }, { status: 500 })
+    return NextResponse.json({ error: 'No se pudo extraer la información' }, { status: 500 })
 
   } catch (error: any) {
-    console.error('[v0] Error Crítico:', error)
-    // Mensaje amigable para el usuario en caso de fallo total
-    const status = error.status || 503
+    console.error('[v0] Error Crítico en API:', error)
     return NextResponse.json(
-      { error: 'Servicio de IA saturado temporalmente. Por favor, reintenta.' }, 
-      { status }
+      { error: 'Servidores de IA ocupados. Intenta de nuevo en 5 segundos.' }, 
+      { status: 503 }
     )
   }
 }
