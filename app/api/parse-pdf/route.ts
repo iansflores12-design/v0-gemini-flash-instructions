@@ -252,7 +252,7 @@ RESPONDE SOLO CON JSON VALIDO (sin markdown, sin backticks):
 {"metadata":{"school":"","grade":"","section":"","year":2026,"partial":null,"week":null,"subject":""},"tasks":[{"title":"Nombre exacto","subject":"Materia","due_date":"YYYY-MM-DD","description":"Instrucciones completas","value":"Porcentaje total","materials":[{"name":"Material"}]}]}`
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
