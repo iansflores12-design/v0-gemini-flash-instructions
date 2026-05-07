@@ -134,7 +134,7 @@ INSTRUCCIONES IMPORTANTES:
 8. La descripcion debe incluir las instrucciones detalladas de la tarea
 9. Los materiales son los items necesarios listados (Notebook, Computer, Glue, etc.)
 
-ADEMAS, extrae la siguiente METADATA del documento (busca en encabezados, titulos, etc.):
+ADEMAS, extrae la siguiente METADATA del documento OBLIGATORIO EXCEPTO SEMANA Y PARCIAL (busca en encabezados, titulos, etc.):
 - school: Nombre del colegio/escuela
 - grade: Grado (ej: "7mo", "8vo", "9no", "10mo")
 - section: Seccion (ej: "A", "B", "C")
