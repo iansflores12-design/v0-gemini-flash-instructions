@@ -1,78 +1,137 @@
+import { NextRequest, NextResponse } from 'next/server'
+import mammoth from 'mammoth'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import crypto from 'crypto'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+// API KEY FIJA Y MODELO ESTABLE
+const GEMINI_API_KEY = 'AIzaSyBthuQfIIQ2SQJtar_uslJiGoWqAr7UeCw'
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
+const MODEL_NAME = 'gemini-2.5-flash' // Cambiado a 1.5-flash por ser el más estable para JSON
 
-export async function POST(request: Request) {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+// Función para limpiar el JSON de cualquier basura (Markdown, textos extra, etc.)
+function cleanAndParseJSON(text: string) {
   try {
-    const { text } = await request.json()
+    // 1. Quitar bloques de código Markdown
+    let cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
     
-    if (!text) {
-      return NextResponse.json({ error: 'No text provided' }, { status: 400 })
-    }
-
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
-    }
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' })
+    // 2. Buscar el primer '{' y el último '}' para ignorar texto exterior
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
     
-    const prompt = `Analiza el siguiente texto de una agenda escolar o lista de tareas y extrae la información estructurada.
-
-TEXTO A ANALIZAR:
-"""
-${text}
-"""
-
-Responde ÚNICAMENTE con un JSON válido (sin markdown, sin backticks) con este formato exacto:
-{
-  "tasks": [
-    {
-      "title": "Nombre de la tarea",
-      "subject": "Nombre de la materia si se menciona o null",
-      "due_date": "YYYY-MM-DD (usa la fecha actual ${new Date().toISOString().split('T')[0]} como referencia para interpretar fechas relativas como 'mañana', 'lunes', etc.)",
-      "description": "Descripción detallada de la tarea si existe o null",
-      "value": "Valor o puntuación de la tarea (ej: '10%', '20 puntos', '5') o null si no se especifica",
-      "materials": [
-        { "name": "nombre del material", "quantity": "cantidad si se especifica o null" }
-      ]
-    }
-  ]
+    if (start === -1 || end === -1) throw new Error("No se encontró estructura JSON");
+    
+    cleaned = cleaned.substring(start, end + 1);
+    
+    // 3. Reparar comas finales comunes en arrays
+    cleaned = cleaned.replace(/,(\s*[}\]])/g, '$1');
+    
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.error("[Limpieza JSON] Falló el parseo:", e);
+    return null;
+  }
 }
 
-Reglas:
-- Extrae TODAS las tareas mencionadas
-- Si no hay fecha específica, usa una fecha razonable cercana
-- Los materiales incluyen libros, cuadernos, hojas, colores, cartulinas, etc.
-- Si no hay materiales mencionados, deja el array vacío
-- La descripción debe incluir detalles, instrucciones y criterios de la tarea
-- El value es importante para calificaciones: busca porcentajes, puntos, puntajes, puntuaciones, peso, etc.
-- Responde SOLO con el JSON, sin explicaciones adicionales`
+function generateFileHash(buffer: Buffer): string {
+  return crypto.createHash('sha256').update(buffer).digest('hex')
+}
 
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const responseText = response.text()
+async function checkCache(fileHash: string) {
+  try {
+    const { data, error } = await supabase
+      .from('cached_agendas')
+      .select('*')
+      .eq('file_hash', fileHash)
+      .single()
     
-    // Clean the response - remove markdown code blocks if present
-    let cleanedText = responseText.trim()
-    if (cleanedText.startsWith('```json')) {
-      cleanedText = cleanedText.slice(7)
-    } else if (cleanedText.startsWith('```')) {
-      cleanedText = cleanedText.slice(3)
+    if (data && !error) {
+      await supabase.from('cached_agendas').update({ 
+        used_count: (data.used_count || 0) + 1,
+        last_used_at: new Date().toISOString()
+      }).eq('id', data.id)
+      return data.tasks_json
     }
-    if (cleanedText.endsWith('```')) {
-      cleanedText = cleanedText.slice(0, -3)
+  } catch (e) {}
+  return null
+}
+
+async function saveToCache(fileHash: string, fileName: string, tasks: any[], metadata: any) {
+  try {
+    await supabase.from('cached_agendas').upsert({
+      file_hash: fileHash,
+      file_name: fileName,
+      tasks_json: { tasks, metadata },
+      school_name: metadata.school || null,
+      grade: metadata.grade || null,
+      section: metadata.section || null,
+      year: metadata.year || 2026,
+      subject: metadata.subject || null,
+    }, { onConflict: 'file_hash' })
+  } catch (e) {}
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const formData = await req.formData()
+    const file = formData.get('pdf') as File | null
+    const userId = formData.get('userId') as string | null
+
+    if (!file || !userId) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const fileHash = generateFileHash(buffer)
+
+    // 1. Cache HIT
+    const cached = await checkCache(fileHash)
+    if (cached) return NextResponse.json({ ...cached, fromCache: true })
+
+    const isPDF = file.name.toLowerCase().endsWith('.pdf')
+    const model = genAI.getGenerativeModel({ model: MODEL_NAME })
+
+    const prompt = `Analiza esta agenda escolar y extrae la información.
+    IMPORTANTE: Identifica el Colegio/Escuela.
+    
+    Responde estrictamente con este JSON:
+    {
+      "metadata": { "school": "", "grade": "", "section": "", "year": 2026, "subject": "" },
+      "tasks": [
+        { "title": "", "subject": "", "due_date": "YYYY-MM-DD", "description": "", "value": "", "materials": [] }
+      ]
+    }`
+
+    let result;
+    if (isPDF) {
+      result = await model.generateContent([
+        prompt,
+        { inlineData: { mimeType: 'application/pdf', data: buffer.toString('base64') } }
+      ])
+    } else {
+      const docxText = (await mammoth.extractRawText({ buffer })).value
+      result = await model.generateContent(`${prompt}\n\nTEXTO:\n${docxText}`)
     }
-    cleanedText = cleanedText.trim()
-    
-    const parsed = JSON.parse(cleanedText)
-    
-    return NextResponse.json(parsed)
-  } catch (error) {
-    console.error('Error parsing agenda:', error)
-    return NextResponse.json(
-      { error: 'Failed to parse agenda text' },
-      { status: 500 }
-    )
+
+    const responseText = result.response.text()
+    const parsedData = cleanAndParseJSON(responseText)
+
+    if (parsedData && parsedData.tasks) {
+      // Normalizar metadata
+      if (!parsedData.metadata) parsedData.metadata = {}
+      if (!parsedData.metadata.school) parsedData.metadata.school = "Institución no detectada"
+
+      await saveToCache(fileHash, file.name, parsedData.tasks, parsedData.metadata)
+      return NextResponse.json({ tasks: parsedData.tasks, metadata: parsedData.metadata })
+    }
+
+    throw new Error("No se pudo estructurar el contenido como JSON")
+
+  } catch (error: any) {
+    console.error('[v0] Error:', error)
+    return NextResponse.json({ error: 'Error procesando agenda', details: error.message }, { status: 500 })
   }
 }
