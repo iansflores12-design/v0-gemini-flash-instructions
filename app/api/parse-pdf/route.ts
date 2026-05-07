@@ -4,12 +4,12 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
-// CONFIGURACIÓN PARA ALTA DISPONIBILIDAD (App Masiva)
-// Usamos versiones estables para evitar el error 503
+// CONFIGURACIÓN DE MODELOS
 const PRIMARY_MODEL = 'gemini-1.5-flash' 
 const FALLBACK_MODEL = 'gemini-2.0-flash-001'
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
+// USANDO LA API KEY PROPORCIONADA
+const GEMINI_API_KEY = "AIzaSyAoiN0VsY3AjLhyZZg08Y9Dnp7052h8TIY"
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
 
 const supabase = createClient(
@@ -71,7 +71,6 @@ async function processDocumentWithGemini(
   const models = [PRIMARY_MODEL, FALLBACK_MODEL]
   let lastError = null
 
-  // PROMPT ORIGINAL (Mantenemos tu estructura para que tu sitio no falle)
   const prompt = `Analiza el documento y extrae la información. Es CRÍTICO identificar la INSTITUCIÓN (Colegio/Escuela) en encabezados o logos.
   
   Responde ÚNICAMENTE con un JSON válido con este formato exacto:
@@ -111,7 +110,6 @@ async function processDocumentWithGemini(
       const result = await model.generateContent(parts)
       const responseText = result.response.text()
       
-      // Limpieza robusta de JSON para evitar errores de parseo
       let cleaned = responseText.trim()
       cleaned = cleaned.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
@@ -121,13 +119,13 @@ async function processDocumentWithGemini(
       }
     } catch (err: any) {
       lastError = err
-      console.warn(`[v0] El modelo ${modelName} falló con estado ${err.status}.`)
-      // Si es error de saturación (503) o cuota (429), intentamos con el siguiente
-      if (err.status === 503 || err.status === 429) continue
+      console.warn(`[v0] El modelo ${modelName} falló:`, err.message)
+      // Si es error de permisos (403), saturación (503) o cuota (429), probamos el siguiente
+      if (err.status === 403 || err.status === 503 || err.status === 429) continue
       break 
     }
   }
-  throw lastError || new Error("No se pudo procesar el documento con ningún modelo")
+  throw lastError || new Error("Fallo general en la API de Google")
 }
 
 export async function POST(req: NextRequest) {
@@ -143,7 +141,6 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer())
     const fileHash = generateFileHash(buffer)
 
-    // 1. Ver Cache (Ahorro de tokens y respuesta inmediata)
     const cached = await checkCache(fileHash)
     if (cached) return NextResponse.json({ ...cached, fromCache: true })
 
@@ -165,7 +162,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (resultJSON) {
-      // Normalización de metadata antes de responder
       if (!resultJSON.metadata) resultJSON.metadata = {}
       if (!resultJSON.metadata.school || resultJSON.metadata.school === "") {
         resultJSON.metadata.school = "Institución no detectada";
@@ -183,10 +179,9 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('[v0] Error Crítico:', error)
-    const status = error.status === 503 ? 503 : 500
     return NextResponse.json(
-      { error: 'El servicio está saturado, por favor intenta en unos segundos.' }, 
-      { status }
+      { error: error.message || 'Error interno del servidor' }, 
+      { status: error.status || 500 }
     )
   }
 }
