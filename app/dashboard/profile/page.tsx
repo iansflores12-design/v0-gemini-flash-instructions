@@ -88,7 +88,7 @@ export default function ProfilePage() {
             </div>
             <div>
               <p className="font-medium text-foreground">ClearGrade</p>
-              <p className="text-sm text-muted-foreground">Version 1.0</p>
+              <p className="text-sm text-muted-foreground">Beta 231 8526</p>
             </div>
           </div>
         </div>
