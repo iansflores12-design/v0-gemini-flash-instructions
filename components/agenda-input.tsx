@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Sparkles, Loader2, Check, X, FileUp, FileText, ChevronRight, Layers } from 'lucide-react'
+import { Sparkles, Loader2, Check, X, FileUp, FileText, ChevronRight, Layers, Eye, Edit3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { createTaskWithMaterials } from '@/lib/actions'
 import type { Subject, ParsedAgendaItem } from '@/lib/types'
 
@@ -15,7 +16,7 @@ interface QueuedFile {
   status: 'pending' | 'processing' | 'done' | 'error'
   tasks?: ParsedAgendaItem[]
   error?: string
-  fromCache?: boolean
+  previewUrl?: string
 }
 
 // Check if running on mobile
@@ -65,13 +66,14 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
   
   // Current file being reviewed
   const [parsedTasks, setParsedTasks] = useState<ParsedAgendaItem[]>([])
-  const [fromCache, setFromCache] = useState(false)
   
   // UI state
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessingQueue, setIsProcessingQueue] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+  const [editingTaskIndex, setEditingTaskIndex] = useState<number | null>(null)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   
@@ -81,6 +83,25 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
       requestNotificationPermission()
     }
   }, [])
+
+  // Create preview URLs for files
+  useEffect(() => {
+    fileQueue.forEach((qf, idx) => {
+      if (!qf.previewUrl && qf.file.type === 'application/pdf') {
+        const url = URL.createObjectURL(qf.file)
+        setFileQueue(prev => prev.map((f, i) => 
+          i === idx ? { ...f, previewUrl: url } : f
+        ))
+      }
+    })
+    
+    // Cleanup URLs on unmount
+    return () => {
+      fileQueue.forEach(qf => {
+        if (qf.previewUrl) URL.revokeObjectURL(qf.previewUrl)
+      })
+    }
+  }, [fileQueue.length])
 
   // Process the queue automatically
   useEffect(() => {
@@ -123,8 +144,7 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
           i === pendingIndex ? { 
             ...f, 
             status: 'done' as const, 
-            tasks: data.tasks || [],
-            fromCache: !!data.fromCache
+            tasks: data.tasks || []
           } : f
         ))
         
@@ -154,11 +174,10 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
     const current = fileQueue[currentIndex]
     if (current?.status === 'done' && current.tasks) {
       setParsedTasks(current.tasks)
-      setFromCache(!!current.fromCache)
     } else {
       setParsedTasks([])
-      setFromCache(false)
     }
+    setEditingTaskIndex(null)
   }, [currentIndex, fileQueue])
 
   const handleFilesSelect = (files: FileList | null) => {
@@ -212,7 +231,16 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
   }
 
   const handleSaveAndNext = async () => {
+    // Check if any task is missing subject
+    const missingSubject = parsedTasks.findIndex(t => !t.subject)
+    if (missingSubject !== -1) {
+      setEditingTaskIndex(missingSubject)
+      setError('Completa la materia de todas las tareas antes de guardar')
+      return
+    }
+    
     setSaving(true)
+    setError(null)
     try {
       for (const task of parsedTasks) {
         const result = await createTaskWithMaterials(
@@ -277,18 +305,30 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
 
   const removeTask = (index: number) => {
     setParsedTasks(prev => prev.filter((_, i) => i !== index))
+    if (editingTaskIndex === index) setEditingTaskIndex(null)
+  }
+
+  const updateTask = (index: number, updates: Partial<ParsedAgendaItem>) => {
+    setParsedTasks(prev => prev.map((t, i) => i === index ? { ...t, ...updates } : t))
   }
 
   const clearAll = () => {
+    // Cleanup URLs
+    fileQueue.forEach(qf => {
+      if (qf.previewUrl) URL.revokeObjectURL(qf.previewUrl)
+    })
     setFileQueue([])
     setCurrentIndex(0)
     setParsedTasks([])
-    setFromCache(false)
     setError(null)
     setIsProcessingQueue(false)
+    setShowPreview(false)
+    setEditingTaskIndex(null)
   }
 
   const removeFromQueue = (index: number) => {
+    const qf = fileQueue[index]
+    if (qf.previewUrl) URL.revokeObjectURL(qf.previewUrl)
     setFileQueue(prev => prev.filter((_, i) => i !== index))
     if (index <= currentIndex && currentIndex > 0) {
       setCurrentIndex(currentIndex - 1)
@@ -301,6 +341,7 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
   const doneCount = fileQueue.filter(f => f.status === 'done').length
   const currentFile = fileQueue[currentIndex]
   const hasReadyFiles = doneCount > 0
+  const hasMissingInfo = parsedTasks.some(t => !t.subject)
 
   return (
     <section className="space-y-4">
@@ -413,7 +454,7 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
       {/* Current File Review */}
       {parsedTasks.length > 0 && currentFile && (
         <div className="space-y-4">
-          {/* Current file header */}
+          {/* Current file header with preview button */}
           <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20">
             <div className="flex items-center gap-3">
               <FileText className="w-5 h-5 text-primary" />
@@ -423,19 +464,47 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
                   {currentIndex + 1} de {fileQueue.length} archivos
                 </p>
               </div>
-              {fromCache && (
-                <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs">
-                  Cache
-                </span>
+              {currentFile.previewUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPreview(!showPreview)}
+                  className="rounded-xl"
+                >
+                  <Eye className="w-4 h-4 mr-1" />
+                  {showPreview ? 'Ocultar' : 'Ver PDF'}
+                </Button>
               )}
             </div>
           </div>
+
+          {/* PDF Preview */}
+          {showPreview && currentFile.previewUrl && (
+            <div className="rounded-2xl overflow-hidden border border-border bg-card">
+              <iframe
+                src={currentFile.previewUrl}
+                className="w-full h-[400px]"
+                title="Vista previa del documento"
+              />
+            </div>
+          )}
+
+          {/* Missing info warning */}
+          {hasMissingInfo && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-sm flex items-start gap-3">
+              <Edit3 className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">Informacion incompleta</p>
+                <p className="text-amber-600 dark:text-amber-500">Algunas tareas no tienen materia asignada. Toca en ellas para completar.</p>
+              </div>
+            </div>
+          )}
 
           {/* Tasks found */}
           <div className="p-5 rounded-3xl bg-accent/10 border border-accent/20">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-2xl bg-accent/20 flex items-center justify-center">
-                <Check className="w-5 h-5 text-accent" />
+                <Sparkles className="w-5 h-5 text-accent" />
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-foreground">
@@ -449,37 +518,121 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
               {parsedTasks.map((task, index) => (
                 <div 
                   key={index}
-                  className="flex items-start gap-3 p-4 rounded-2xl bg-card shadow-sm border-l-4"
-                  style={{ borderLeftColor: task.subject_color || '#6750A4' }}
+                  className={`p-4 rounded-2xl bg-card shadow-sm border-l-4 transition-all ${
+                    !task.subject ? 'border-amber-500 ring-2 ring-amber-500/20' : ''
+                  } ${editingTaskIndex === index ? 'ring-2 ring-primary/30' : ''}`}
+                  style={{ borderLeftColor: task.subject ? (task.subject_color || '#6750A4') : undefined }}
+                  onClick={() => setEditingTaskIndex(editingTaskIndex === index ? null : index)}
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground">{task.title}</p>
-                    {task.description && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      {task.subject && (
-                        <span 
-                          className="px-3 py-1 rounded-full text-xs font-medium"
-                          style={{ 
-                            backgroundColor: `${task.subject_color || '#6750A4'}20`,
-                            color: task.subject_color || '#6750A4'
-                          }}
+                  {editingTaskIndex === index ? (
+                    // Edit mode
+                    <div className="space-y-3" onClick={e => e.stopPropagation()}>
+                      <Input
+                        value={task.title}
+                        onChange={e => updateTask(index, { title: e.target.value })}
+                        placeholder="Titulo de la tarea"
+                        className="rounded-xl"
+                      />
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">Materia *</label>
+                          <select
+                            value={task.subject || ''}
+                            onChange={e => {
+                              const subject = subjects.find(s => s.name === e.target.value)
+                              updateTask(index, { 
+                                subject: e.target.value,
+                                subject_color: subject?.color_code
+                              })
+                            }}
+                            className="w-full h-10 rounded-xl bg-secondary/50 border border-input px-3 text-sm"
+                          >
+                            <option value="">Seleccionar...</option>
+                            {subjects.map(s => (
+                              <option key={s.id} value={s.name}>{s.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">Fecha</label>
+                          <Input
+                            type="date"
+                            value={task.due_date}
+                            onChange={e => updateTask(index, { due_date: e.target.value })}
+                            className="rounded-xl"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Descripcion</label>
+                        <textarea
+                          value={task.description || ''}
+                          onChange={e => updateTask(index, { description: e.target.value })}
+                          rows={2}
+                          className="w-full rounded-xl bg-secondary/50 border border-input px-3 py-2 text-sm resize-none"
+                          placeholder="Descripcion opcional..."
+                        />
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingTaskIndex(null)}
+                          className="rounded-xl"
                         >
-                          {task.subject}
-                        </span>
-                      )}
-                      <span className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-xs">
-                        {task.due_date}
-                      </span>
+                          Listo
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeTask(index)}
+                          className="rounded-xl text-destructive hover:text-destructive"
+                        >
+                          Eliminar
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    onClick={() => removeTask(index)}
-                    className="p-2 rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  ) : (
+                    // View mode
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground">{task.title}</p>
+                        {task.description && (
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          {task.subject ? (
+                            <span 
+                              className="px-3 py-1 rounded-full text-xs font-medium"
+                              style={{ 
+                                backgroundColor: `${task.subject_color || '#6750A4'}20`,
+                                color: task.subject_color || '#6750A4'
+                              }}
+                            >
+                              {task.subject}
+                            </span>
+                          ) : (
+                            <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium flex items-center gap-1">
+                              <Edit3 className="w-3 h-3" />
+                              Sin materia
+                            </span>
+                          )}
+                          <span className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-xs">
+                            {task.due_date}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removeTask(index) }}
+                        className="p-2 rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
