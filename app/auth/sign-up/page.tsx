@@ -1,13 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Mail, Lock, User, Eye, EyeOff, Loader2, School, Plus, ChevronDown, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ClearGradeLogo } from '@/components/cleargrade-logo'
+
+interface Institution {
+  id: string
+  name: string
+}
 
 export default function SignUpPage() {
   const [firstName, setFirstName] = useState('')
@@ -21,8 +26,45 @@ export default function SignUpPage() {
   const router = useRouter()
   const supabase = createClient()
 
+  // Institution state
+  const [institutions, setInstitutions] = useState<Institution[]>([])
+  const [loadingInstitutions, setLoadingInstitutions] = useState(true)
+  const [selectedInstitution, setSelectedInstitution] = useState<Institution | null>(null)
+  const [newInstitutionName, setNewInstitutionName] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [creatingNew, setCreatingNew] = useState(false)
+  
+  // Grade and section
+  const [grade, setGrade] = useState('')
+  const [section, setSection] = useState('')
+
+  // Load existing institutions
+  useEffect(() => {
+    const loadInstitutions = async () => {
+      setLoadingInstitutions(true)
+      const { data } = await supabase
+        .from('institutions')
+        .select('id, name')
+        .order('name')
+      if (data) setInstitutions(data)
+      setLoadingInstitutions(false)
+    }
+    loadInstitutions()
+  }, [supabase])
+
+  const filteredInstitutions = institutions.filter(inst =>
+    inst.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!selectedInstitution && !newInstitutionName.trim()) {
+      setError('Por favor selecciona o crea tu institucion')
+      return
+    }
+    
     setLoading(true)
     setError(null)
 
@@ -47,10 +89,48 @@ export default function SignUpPage() {
       return
     }
 
-    // Si el usuario acepta recibir marketing, guardar en tabla
-    if (marketingOptIn && data.user) {
-      try {
-        const { error: insertError } = await supabase
+    if (data.user) {
+      // Handle institution - create new or use existing
+      let institutionId = selectedInstitution?.id
+      
+      if (!institutionId && newInstitutionName.trim()) {
+        // Check if already exists (case insensitive)
+        const { data: existing } = await supabase
+          .from('institutions')
+          .select('id')
+          .ilike('name', newInstitutionName.trim())
+          .single()
+        
+        if (existing) {
+          institutionId = existing.id
+        } else {
+          // Create new institution
+          const { data: newInst } = await supabase
+            .from('institutions')
+            .insert({
+              name: newInstitutionName.trim(),
+              created_by: data.user.id
+            })
+            .select('id')
+            .single()
+          
+          if (newInst) institutionId = newInst.id
+        }
+      }
+
+      // Update profile with institution, grade, section
+      await supabase
+        .from('profiles')
+        .update({
+          institution_id: institutionId || null,
+          grade: grade || null,
+          section: section || null,
+        })
+        .eq('id', data.user.id)
+
+      // Marketing subscriber
+      if (marketingOptIn) {
+        await supabase
           .from('marketing_subscribers')
           .insert({
             email: email,
@@ -59,14 +139,6 @@ export default function SignUpPage() {
             user_id: data.user.id,
             subscribed: true,
           })
-        
-        if (insertError) {
-          console.error('[v0] Marketing insert error:', insertError.message)
-        } else {
-          console.log('[v0] User saved to marketing_subscribers successfully')
-        }
-      } catch (err) {
-        console.error('[v0] Error saving to marketing_subscribers:', err)
       }
     }
 
@@ -93,7 +165,7 @@ export default function SignUpPage() {
             </div>
           )}
 
-          {/* Nombre y Apellido en dos columnas */}
+          {/* Nombre y Apellido */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <label htmlFor="firstName" className="text-sm font-medium text-foreground">
@@ -132,6 +204,154 @@ export default function SignUpPage() {
             </div>
           </div>
 
+          {/* Institution Selector */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">
+              Institucion educativa
+            </label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="w-full h-12 rounded-xl bg-surface-container border border-outline-variant px-3 flex items-center justify-between text-left hover:border-primary transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <School className="w-5 h-5 text-muted-foreground" />
+                  <span className={selectedInstitution || newInstitutionName ? 'text-foreground' : 'text-muted-foreground'}>
+                    {selectedInstitution?.name || newInstitutionName || 'Selecciona o crea tu institucion'}
+                  </span>
+                </div>
+                <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+                  {/* Search */}
+                  <div className="p-2 border-b border-border">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        placeholder="Buscar institucion..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 h-10 rounded-lg bg-secondary/50 border-0"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* List */}
+                  <div className="max-h-48 overflow-y-auto">
+                    {loadingInstitutions ? (
+                      <div className="px-4 py-3 text-center text-muted-foreground">
+                        <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                        Cargando...
+                      </div>
+                    ) : filteredInstitutions.length > 0 ? (
+                      filteredInstitutions.map((inst) => (
+                        <button
+                          key={inst.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedInstitution(inst)
+                            setNewInstitutionName('')
+                            setCreatingNew(false)
+                            setShowDropdown(false)
+                            setSearchQuery('')
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-secondary/50 transition-colors flex items-center gap-3"
+                        >
+                          <School className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-foreground">{inst.name}</span>
+                        </button>
+                      ))
+                    ) : searchQuery ? (
+                      <div className="px-4 py-3 text-muted-foreground text-sm text-center">
+                        No se encontraron instituciones
+                      </div>
+                    ) : (
+                      <div className="px-4 py-3 text-muted-foreground text-sm text-center">
+                        No hay instituciones aun
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Create new */}
+                  <div className="border-t border-border p-2">
+                    {creatingNew ? (
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          placeholder="Nombre de tu institucion"
+                          value={newInstitutionName}
+                          onChange={(e) => setNewInstitutionName(e.target.value)}
+                          className="h-10 rounded-lg bg-secondary/50 border-0 flex-1"
+                          autoFocus
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            if (newInstitutionName.trim()) {
+                              setSelectedInstitution(null)
+                              setShowDropdown(false)
+                              setCreatingNew(false)
+                              setSearchQuery('')
+                            }
+                          }}
+                          className="rounded-lg px-4"
+                          disabled={!newInstitutionName.trim()}
+                        >
+                          Usar
+                        </Button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setCreatingNew(true)}
+                        className="w-full px-4 py-2.5 text-left hover:bg-secondary/50 transition-colors flex items-center gap-3 text-primary rounded-lg"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span className="font-medium">Agregar nueva institucion</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Grade and Section */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <label htmlFor="grade" className="text-sm font-medium text-foreground">
+                Grado
+              </label>
+              <Input
+                id="grade"
+                type="text"
+                placeholder="Ej: 11"
+                value={grade}
+                onChange={(e) => setGrade(e.target.value)}
+                className="h-12 rounded-xl bg-surface-container border-outline-variant focus:border-primary"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="section" className="text-sm font-medium text-foreground">
+                Seccion
+              </label>
+              <Input
+                id="section"
+                type="text"
+                placeholder="Ej: A"
+                value={section}
+                onChange={(e) => setSection(e.target.value)}
+                className="h-12 rounded-xl bg-surface-container border-outline-variant focus:border-primary"
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
               Correo electronico
@@ -152,7 +372,7 @@ export default function SignUpPage() {
 
           <div className="space-y-2">
             <label htmlFor="password" className="text-sm font-medium text-foreground">
-              Contraseña
+              Contrasena
             </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -190,7 +410,7 @@ export default function SignUpPage() {
                   Recibir novedades y ofertas
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Te enviaremos actualizaciones sobre nuevas features, campañas especiales y consejos para estudiantes. Puedes desuscribirte en cualquier momento.
+                  Te enviaremos actualizaciones sobre nuevas features y consejos para estudiantes.
                 </p>
               </div>
             </label>

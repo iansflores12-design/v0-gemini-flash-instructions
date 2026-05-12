@@ -4,36 +4,25 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
-// API KEY FIJA Y MODELO ESTABLE
 const GEMINI_API_KEY = 'AIzaSyBthuQfIIQ2SQJtar_uslJiGoWqAr7UeCw'
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
-const MODEL_NAME = 'gemini-2.5-flash' // Cambiado a 1.5-flash por ser el más estable para JSON
+const MODEL_NAME = 'gemini-2.5-flash'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-// Función para limpiar el JSON de cualquier basura (Markdown, textos extra, etc.)
 function cleanAndParseJSON(text: string) {
   try {
-    // 1. Quitar bloques de código Markdown
     let cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-    
-    // 2. Buscar el primer '{' y el último '}' para ignorar texto exterior
     const start = cleaned.indexOf('{');
     const end = cleaned.lastIndexOf('}');
-    
-    if (start === -1 || end === -1) throw new Error("No se encontró estructura JSON");
-    
+    if (start === -1 || end === -1) throw new Error("No se encontro estructura JSON");
     cleaned = cleaned.substring(start, end + 1);
-    
-    // 3. Reparar comas finales comunes en arrays
     cleaned = cleaned.replace(/,(\s*[}\]])/g, '$1');
-    
     return JSON.parse(cleaned);
-  } catch (e) {
-    console.error("[Limpieza JSON] Falló el parseo:", e);
+  } catch {
     return null;
   }
 }
@@ -42,13 +31,34 @@ function generateFileHash(buffer: Buffer): string {
   return crypto.createHash('sha256').update(buffer).digest('hex')
 }
 
-async function checkCache(fileHash: string) {
+// Get user's institution_id from profile
+async function getUserInstitution(userId: string): Promise<string | null> {
   try {
-    const { data, error } = await supabase
+    const { data } = await supabase
+      .from('profiles')
+      .select('institution_id')
+      .eq('id', userId)
+      .single()
+    return data?.institution_id || null
+  } catch {
+    return null
+  }
+}
+
+// Check cache - now filtered by institution
+async function checkCache(fileHash: string, institutionId: string | null) {
+  try {
+    let query = supabase
       .from('cached_agendas')
       .select('*')
       .eq('file_hash', fileHash)
-      .single()
+    
+    // Only match agendas from same institution if user has one
+    if (institutionId) {
+      query = query.eq('institution_id', institutionId)
+    }
+    
+    const { data, error } = await query.single()
     
     if (data && !error) {
       await supabase.from('cached_agendas').update({ 
@@ -57,11 +67,18 @@ async function checkCache(fileHash: string) {
       }).eq('id', data.id)
       return data.tasks_json
     }
-  } catch (e) {}
+  } catch {}
   return null
 }
 
-async function saveToCache(fileHash: string, fileName: string, tasks: any[], metadata: any) {
+// Save to cache - now includes institution_id
+async function saveToCache(
+  fileHash: string, 
+  fileName: string, 
+  tasks: any[], 
+  metadata: any,
+  institutionId: string | null
+) {
   try {
     await supabase.from('cached_agendas').upsert({
       file_hash: fileHash,
@@ -72,8 +89,9 @@ async function saveToCache(fileHash: string, fileName: string, tasks: any[], met
       section: metadata.section || null,
       year: metadata.year || 2026,
       subject: metadata.subject || null,
+      institution_id: institutionId,
     }, { onConflict: 'file_hash' })
-  } catch (e) {}
+  } catch {}
 }
 
 export async function POST(req: NextRequest) {
@@ -84,18 +102,21 @@ export async function POST(req: NextRequest) {
 
     if (!file || !userId) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
 
+    // Get user's institution
+    const institutionId = await getUserInstitution(userId)
+
     const buffer = Buffer.from(await file.arrayBuffer())
     const fileHash = generateFileHash(buffer)
 
-    // 1. Cache HIT
-    const cached = await checkCache(fileHash)
-    if (cached) return NextResponse.json({ ...cached, fromCache: true })
+    // 1. Cache HIT - filtered by institution
+    const cached = await checkCache(fileHash, institutionId)
+    if (cached) return NextResponse.json({ ...cached })
 
     const isPDF = file.name.toLowerCase().endsWith('.pdf')
     const model = genAI.getGenerativeModel({ model: MODEL_NAME })
 
-    const prompt = `Analiza esta agenda escolar y extrae la información.
-    IMPORTANTE: Identifica el Colegio/Escuela.
+    const prompt = `Analiza esta agenda escolar y extrae la informacion.
+    IMPORTANTE: Identifica el Colegio/Escuela, grado, seccion si aparece.
     
     Responde estrictamente con este JSON:
     {
@@ -103,7 +124,10 @@ export async function POST(req: NextRequest) {
       "tasks": [
         { "title": "", "subject": "", "due_date": "YYYY-MM-DD", "description": "", "value": "", "materials": [] }
       ]
-    }`
+    }
+    
+    Si no puedes detectar algun campo, dejalo como string vacio "".
+    La materia (subject) es importante - intenta detectarla del contexto.`
 
     let result;
     if (isPDF) {
@@ -120,12 +144,15 @@ export async function POST(req: NextRequest) {
     const parsedData = cleanAndParseJSON(responseText)
 
     if (parsedData && parsedData.tasks) {
-      // Normalizar metadata
       if (!parsedData.metadata) parsedData.metadata = {}
-      if (!parsedData.metadata.school) parsedData.metadata.school = "Institución no detectada"
 
-      await saveToCache(fileHash, file.name, parsedData.tasks, parsedData.metadata)
-      return NextResponse.json({ tasks: parsedData.tasks, metadata: parsedData.metadata })
+      // Save to cache with institution
+      await saveToCache(fileHash, file.name, parsedData.tasks, parsedData.metadata, institutionId)
+      
+      return NextResponse.json({ 
+        tasks: parsedData.tasks, 
+        metadata: parsedData.metadata 
+      })
     }
 
     throw new Error("No se pudo estructurar el contenido como JSON")
