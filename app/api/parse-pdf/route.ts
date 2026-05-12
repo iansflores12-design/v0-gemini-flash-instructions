@@ -116,18 +116,24 @@ export async function POST(req: NextRequest) {
     const model = genAI.getGenerativeModel({ model: MODEL_NAME })
 
     const prompt = `Analiza esta agenda escolar y extrae la informacion.
-    IMPORTANTE: Identifica el Colegio/Escuela, grado, seccion si aparece.
+    IMPORTANTE: 
+    - Identifica el Colegio/Escuela, grado, seccion si aparece.
+    - DETECTA SI ES POR PARCIAL O POR SEMANA (son excluyentes):
+      * Si dice "Parcial 1, 2, 3..." o "1er, 2do, 3er parcial": usa solo "partial" (numero del parcial)
+      * Si dice "Semana 1, 2, 3..." o "Week 1, 2, 3...": usa solo "week_number" (numero de semana)
+      * UNO O EL OTRO, NUNCA AMBOS
     
     Responde estrictamente con este JSON:
     {
-      "metadata": { "school": "", "grade": "", "section": "", "year": 2026, "subject": "" },
+      "metadata": { "school": "", "grade": "", "section": "", "year": 2026, "subject": "", "partial": null, "week_number": null },
       "tasks": [
         { "title": "", "subject": "", "due_date": "YYYY-MM-DD", "description": "", "value": "", "materials": [] }
       ]
     }
     
-    Si no puedes detectar algun campo, dejalo como string vacio "".
-    La materia (subject) es importante - intenta detectarla del contexto.`
+    - "partial" y "week_number" son numeros o null (nunca ambos a la vez)
+    - Si no puedes detectar, dejalo como null
+    - La materia (subject) es importante - intenta detectarla del contexto.`
 
     let result;
     if (isPDF) {
