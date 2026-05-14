@@ -115,16 +115,23 @@ export async function POST(req: NextRequest) {
     const isPDF = file.name.toLowerCase().endsWith('.pdf')
     const model = genAI.getGenerativeModel({ model: MODEL_NAME })
 
-    const prompt = `Analiza esta agenda escolar y extrae la informacion.
-    IMPORTANTE: 
-    - Identifica el Colegio/Escuela, grado, seccion si aparece.
+    const prompt = `Analiza este documento y determina si es una AGENDA ESCOLAR.
+
+    PASO 1: VALIDACION
+    - Una agenda escolar contiene: tareas, asignaciones, fechas de entrega, materias, actividades escolares
+    - Si el documento NO ES una agenda escolar (ej: factura, carta, articulo, imagen aleatoria), responde:
+      { "is_agenda": false, "error": "Este documento no parece ser una agenda escolar" }
+    
+    PASO 2: SI ES AGENDA, extrae la informacion:
+    - Identifica Colegio/Escuela, grado, seccion si aparece
     - DETECTA SI ES POR PARCIAL O POR SEMANA (son excluyentes):
-      * Si dice "Parcial 1, 2, 3..." o "1er, 2do, 3er parcial": usa solo "partial" (numero del parcial)
-      * Si dice "Semana 1, 2, 3..." o "Week 1, 2, 3...": usa solo "week_number" (numero de semana)
+      * Si dice "Parcial 1, 2, 3..." o "1er, 2do, 3er parcial": usa solo "partial"
+      * Si dice "Semana 1, 2, 3..." o "Week 1, 2, 3...": usa solo "week_number"
       * UNO O EL OTRO, NUNCA AMBOS
     
-    Responde estrictamente con este JSON:
+    Responde con este JSON:
     {
+      "is_agenda": true,
       "metadata": { "school": "", "grade": "", "section": "", "year": 2026, "subject": "", "partial": null, "week_number": null },
       "tasks": [
         { "title": "", "subject": "", "due_date": "YYYY-MM-DD", "description": "", "value": "", "materials": [] }
@@ -132,7 +139,7 @@ export async function POST(req: NextRequest) {
     }
     
     - "partial" y "week_number" son numeros o null (nunca ambos a la vez)
-    - Si no puedes detectar, dejalo como null
+    - Si no puedes detectar, dejalo como null o ""
     - La materia (subject) es importante - intenta detectarla del contexto.`
 
     let result;
@@ -149,7 +156,19 @@ export async function POST(req: NextRequest) {
     const responseText = result.response.text()
     const parsedData = cleanAndParseJSON(responseText)
 
-    if (parsedData && parsedData.tasks) {
+    if (!parsedData) {
+      throw new Error("No se pudo estructurar el contenido como JSON")
+    }
+
+    // Check if it's a valid agenda
+    if (parsedData.is_agenda === false) {
+      return NextResponse.json({ 
+        error: parsedData.error || 'Este documento no parece ser una agenda escolar',
+        isNotAgenda: true 
+      }, { status: 400 })
+    }
+
+    if (parsedData.tasks && parsedData.tasks.length > 0) {
       if (!parsedData.metadata) parsedData.metadata = {}
 
       // Save to cache with institution
@@ -161,7 +180,11 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    throw new Error("No se pudo estructurar el contenido como JSON")
+    return NextResponse.json({ 
+      error: 'No se encontraron tareas en este documento',
+      tasks: [],
+      metadata: parsedData.metadata || {}
+    })
 
   } catch (error: any) {
     console.error('[v0] Error:', error)

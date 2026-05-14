@@ -14,6 +14,20 @@ interface Institution {
   name: string
 }
 
+// Profanity filter - basic list of prohibited words
+const PROHIBITED_WORDS = [
+  'puta', 'puto', 'mierda', 'verga', 'pendejo', 'pendeja', 'cabron', 'cabrona',
+  'chingar', 'chingada', 'culero', 'culera', 'joto', 'jota', 'marica', 'maricon',
+  'cojones', 'coño', 'carajo', 'hijueputa', 'malparido', 'gonorrea', 'hp',
+  'fuck', 'shit', 'bitch', 'asshole', 'dick', 'pussy', 'cunt', 'bastard',
+  'whore', 'slut', 'nigger', 'faggot', 'retard'
+]
+
+function containsProfanity(text: string): boolean {
+  const lower = text.toLowerCase().replace(/[^a-záéíóúñü]/g, '')
+  return PROHIBITED_WORDS.some(word => lower.includes(word))
+}
+
 export default function SignUpPage() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -59,6 +73,17 @@ export default function SignUpPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate profanity in names
+    if (containsProfanity(firstName) || containsProfanity(lastName)) {
+      setError('El nombre contiene palabras no permitidas')
+      return
+    }
+    
+    if (newInstitutionName && containsProfanity(newInstitutionName)) {
+      setError('El nombre de la institucion contiene palabras no permitidas')
+      return
+    }
     
     if (!selectedInstitution && !newInstitutionName.trim()) {
       setError('Por favor selecciona o crea tu institucion')
