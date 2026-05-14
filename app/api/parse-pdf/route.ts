@@ -124,6 +124,9 @@ export async function POST(req: NextRequest) {
     
     PASO 2: SI ES AGENDA, extrae la informacion:
     - Identifica Colegio/Escuela, grado, seccion si aparece
+    - IMPORTANTE sobre SECTION:
+      * Si la agenda es UNICA para una sección específica (ej: "Sección A", "Sección 1", "A"), llena "section"
+      * Si la agenda aplica a MULTIPLES secciones (ej: "ABCD", "EFG", "Todas las secciones"), DEJA "section" VACIO ("")
     - DETECTA SI ES POR PARCIAL O POR SEMANA (son excluyentes):
       * Si dice "Parcial 1, 2, 3..." o "1er, 2do, 3er parcial": usa solo "partial"
       * Si dice "Semana 1, 2, 3..." o "Week 1, 2, 3...": usa solo "week_number"
@@ -139,6 +142,7 @@ export async function POST(req: NextRequest) {
     }
     
     - "partial" y "week_number" son numeros o null (nunca ambos a la vez)
+    - "section" es vacio "" si aplica a multiples secciones, o el nombre de sección si es única
     - Si no puedes detectar, dejalo como null o ""
     - La materia (subject) es importante - intenta detectarla del contexto.`
 
