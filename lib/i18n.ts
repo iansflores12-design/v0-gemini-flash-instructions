@@ -6,16 +6,17 @@ export const translations = {
     buenasDias: 'Buenos días',
     buenasTardes: 'Buenas tardes',
     buenasNoches: 'Buenas noches',
-    
+
     // Navigation
     inicio: 'Inicio',
     tareas: 'Tareas',
     materias: 'Materias',
     chat: 'Chat',
     perfil: 'Perfil',
-    
-    // Dashboard
+
+    // Dashboard stats
     hoy: 'Hoy',
+    manana: 'Mañana',
     pendientes: 'Pendientes',
     proximasTareas: 'Próximas tareas',
     estaSemana: 'Esta semana',
@@ -24,7 +25,13 @@ export const translations = {
     tareaPlural: 'tareas',
     verTodas: 'Ver todas',
     verMasSemanas: 'Ver más semanas',
-    
+    sinMateria: 'Sin materia',
+
+    // Task types
+    examen: 'Examen',
+    proyecto: 'Proyecto',
+    tareaType: 'Tarea',
+
     // Agenda upload
     subeAgendas: 'Sube tus agendas',
     multiplesArchivos: 'Múltiples PDFs o DOCXs',
@@ -32,7 +39,18 @@ export const translations = {
     agregarMasArchivos: 'Agregar más archivos',
     oToca: 'o toca para seleccionar varios',
     pdfODocx: 'PDF o DOCX',
-    
+    soloPermitidos: 'Solo se permiten archivos PDF o DOCX',
+    completaMateria: 'Completa la materia de todas las tareas antes de guardar',
+    agendaProcesada: 'Agenda procesada',
+    noAutenticado: 'No autenticado',
+    errorProcesar: 'Error al procesar',
+    errorDesconocido: 'Error desconocido',
+    errorGuardar: 'Error al guardar',
+    ocultarPdf: 'Ocultar',
+    verPdf: 'Ver PDF',
+    vistaPrevia: 'Vista previa del documento',
+    tituloTarea: 'Título de la tarea',
+
     // Settings
     configuracion: 'Configuración',
     personalizaEstilo: 'Personaliza el estilo de ClearGrade',
@@ -54,26 +72,127 @@ export const translations = {
     cancelar: 'Cancelar',
     guardarCambios: 'Guardar cambios',
     guardado: 'Guardado',
+    guardando: 'Guardando...',
+    guardarColor: 'Guardar color',
     informacionEscolar: 'Información escolar',
+    tuInstitucion: 'Tu institución determina qué agendas se comparten contigo',
     institucionEducativa: 'Institución educativa',
+    seleccionaInstitucion: 'Selecciona o crea tu institución',
+    nombreInstitucion: 'Nombre de tu institución',
     grado: 'Grado',
     seccion: 'Sección',
+
+    // Dark mode
+    claro: 'Claro',
+    auto: 'Auto',
+    oscuro: 'Oscuro',
+    modoColor: 'Modo de color',
+
+    // Auth
+    crearCuenta: 'Crear cuenta',
+    iniciarSesion: 'Iniciar sesión',
+    tuNombre: 'Tu nombre',
+    tuApellido: 'Tu apellido',
+    tuContrasena: 'Tu contraseña',
+    enviarInstrucciones: 'Enviar instrucciones',
+    actualizarContrasena: 'Actualizar Contraseña',
+    tuNuevaContrasena: 'Tu nueva contraseña',
+    confirmaContrasena: 'Confirma tu contraseña',
+    nombreNoPermitido: 'El nombre contiene palabras no permitidas',
+    institucionNoPermitida: 'El nombre de la institución contiene palabras no permitidas',
+    seleccionaInstitucionError: 'Por favor selecciona o crea tu institución',
+
+    // Task list
+    nombreTarea: 'Nombre de la tarea',
+    guardar: 'Guardar',
+    eliminarTarea: 'Eliminar tarea',
+    entrega: 'Entrega',
+
+    // Add subject
+    nombreMateria: 'Nombre de la materia',
+
+    // Chat
+    sinMaterias: 'Sin materias registradas',
+    sinTareasPendientes: 'Sin tareas pendientes',
+    adjuntarArchivo: 'Adjuntar imagen o documento',
+    abrirChat: 'Abrir chat',
+
+    // Profile
+    usuario: 'Usuario',
+    estudiante: 'Estudiante',
+
+    // Landing page
+    organizadoPorSemana: 'Organizado por semana',
+    materialesOrganizados: 'Materiales organizados',
+    progresoVisible: 'Progreso visible',
+
+    // Upgrade
+    planFree: 'Free',
+    planPro: 'Pro',
+    planPremium: 'Premium',
+    perfectoParaEmpezar: 'Perfecto para empezar',
+    paraEstudiantes: 'Para estudiantes dedicados',
+    paraMaximoRendimiento: 'Para máximo rendimiento',
+    conAnuncios: 'Con anuncios',
+    sinAnuncios: 'Sin anuncios',
+    soportePrioritario: 'Soporte prioritario',
+    tareasIlimitadas: 'Tareas ilimitadas',
+    materiasIlimitadas: 'Materias ilimitadas',
+    soporteVip: 'Soporte VIP',
+    analyticsAvanzados: 'Analytics avanzados',
+    planActual: 'Plan actual',
+    contratar: 'Contratar',
+    actualizarPro: 'Actualizar a Pro',
+    actualizarUltra: 'Actualizar a Ultra',
+    cargando: 'Cargando...',
+
+    // API Key
+    configurada: 'Configurada',
+    noConfigurada: 'No configurada',
+    guardarClave: 'Guardar clave',
+    errorGuardarClave: 'Error al guardar la clave',
+    crearClaveApi: 'Crear clave de API',
+
+    // Error boundary
+    completaCampos: 'Por favor completa todos los campos',
+    errorEnviarReporte: 'Error al enviar el reporte',
+    copiarCodigo: 'Copiar código',
+
+    // Paywall
+    // Settings panel
+    contrasenaActualizada: 'Contraseña actualizada correctamente',
+    emailInvalido: 'Email inválido',
+    emailEnProceso: 'Email en proceso de cambio',
+    actualizarContrasenaBtn: 'Actualizar contraseña',
+    cambiarCorreoBtn: 'Cambiar correo',
+    eliminarCuenta: 'Eliminar cuenta permanentemente',
+
+    // Misc
+    copiarEmail: 'Copiar email',
+    nombre: 'Nombre',
+    apellido: 'Apellido',
+    email: 'Email',
+    fechaRegistro: 'Fecha de Registro',
+    suscrito: 'Suscrito',
+    si: 'Sí',
+    no: 'No',
+
+    // Organiza description
+    organizaDescription: 'Organiza tus tareas y materiales escolares con inteligencia artificial',
   },
   en: {
-    // Greetings
     buenasDias: 'Good morning',
     buenasTardes: 'Good afternoon',
     buenasNoches: 'Good evening',
-    
-    // Navigation
+
     inicio: 'Home',
     tareas: 'Tasks',
     materias: 'Subjects',
     chat: 'Chat',
     perfil: 'Profile',
-    
-    // Dashboard
+
     hoy: 'Today',
+    manana: 'Tomorrow',
     pendientes: 'Pending',
     proximasTareas: 'Upcoming tasks',
     estaSemana: 'This week',
@@ -82,16 +201,30 @@ export const translations = {
     tareaPlural: 'tasks',
     verTodas: 'See all',
     verMasSemanas: 'See more weeks',
-    
-    // Agenda upload
+    sinMateria: 'No subject',
+
+    examen: 'Exam',
+    proyecto: 'Project',
+    tareaType: 'Assignment',
+
     subeAgendas: 'Upload schedules',
     multiplesArchivos: 'Multiple PDFs or DOCXs',
     arrastraArchivos: 'Drag your files here',
     agregarMasArchivos: 'Add more files',
     oToca: 'or tap to select multiple',
     pdfODocx: 'PDF or DOCX',
-    
-    // Settings
+    soloPermitidos: 'Only PDF or DOCX files are allowed',
+    completaMateria: 'Complete the subject for all tasks before saving',
+    agendaProcesada: 'Schedule processed',
+    noAutenticado: 'Not authenticated',
+    errorProcesar: 'Error processing',
+    errorDesconocido: 'Unknown error',
+    errorGuardar: 'Error saving',
+    ocultarPdf: 'Hide',
+    verPdf: 'View PDF',
+    vistaPrevia: 'Document preview',
+    tituloTarea: 'Task title',
+
     configuracion: 'Settings',
     personalizaEstilo: 'Customize ClearGrade style',
     apariencia: 'Appearance',
@@ -112,26 +245,113 @@ export const translations = {
     cancelar: 'Cancel',
     guardarCambios: 'Save changes',
     guardado: 'Saved',
+    guardando: 'Saving...',
+    guardarColor: 'Save color',
     informacionEscolar: 'School information',
+    tuInstitucion: 'Your institution determines which schedules are shared with you',
     institucionEducativa: 'Educational institution',
+    seleccionaInstitucion: 'Select or create your institution',
+    nombreInstitucion: 'Institution name',
     grado: 'Grade',
     seccion: 'Section',
+
+    claro: 'Light',
+    auto: 'Auto',
+    oscuro: 'Dark',
+    modoColor: 'Color mode',
+
+    crearCuenta: 'Create account',
+    iniciarSesion: 'Sign in',
+    tuNombre: 'Your name',
+    tuApellido: 'Your last name',
+    tuContrasena: 'Your password',
+    enviarInstrucciones: 'Send instructions',
+    actualizarContrasena: 'Update Password',
+    tuNuevaContrasena: 'Your new password',
+    confirmaContrasena: 'Confirm your password',
+    nombreNoPermitido: 'Name contains forbidden words',
+    institucionNoPermitida: 'Institution name contains forbidden words',
+    seleccionaInstitucionError: 'Please select or create your institution',
+
+    nombreTarea: 'Task name',
+    guardar: 'Save',
+    eliminarTarea: 'Delete task',
+    entrega: 'Due',
+
+    nombreMateria: 'Subject name',
+
+    sinMaterias: 'No subjects registered',
+    sinTareasPendientes: 'No pending tasks',
+    adjuntarArchivo: 'Attach image or document',
+    abrirChat: 'Open chat',
+
+    usuario: 'User',
+    estudiante: 'Student',
+
+    organizadoPorSemana: 'Organized by week',
+    materialesOrganizados: 'Organized materials',
+    progresoVisible: 'Visible progress',
+
+    planFree: 'Free',
+    planPro: 'Pro',
+    planPremium: 'Premium',
+    perfectoParaEmpezar: 'Perfect to get started',
+    paraEstudiantes: 'For dedicated students',
+    paraMaximoRendimiento: 'For maximum performance',
+    conAnuncios: 'With ads',
+    sinAnuncios: 'No ads',
+    soportePrioritario: 'Priority support',
+    tareasIlimitadas: 'Unlimited tasks',
+    materiasIlimitadas: 'Unlimited subjects',
+    soporteVip: 'VIP Support',
+    analyticsAvanzados: 'Advanced analytics',
+    planActual: 'Current plan',
+    contratar: 'Subscribe',
+    actualizarPro: 'Upgrade to Pro',
+    actualizarUltra: 'Upgrade to Ultra',
+    cargando: 'Loading...',
+
+    configurada: 'Configured',
+    noConfigurada: 'Not configured',
+    guardarClave: 'Save key',
+    errorGuardarClave: 'Error saving key',
+    crearClaveApi: 'Create API key',
+
+    completaCampos: 'Please complete all fields',
+    errorEnviarReporte: 'Error sending report',
+    copiarCodigo: 'Copy code',
+
+    contrasenaActualizada: 'Password updated successfully',
+    emailInvalido: 'Invalid email',
+    emailEnProceso: 'Email change in progress',
+    actualizarContrasenaBtn: 'Update password',
+    cambiarCorreoBtn: 'Change email',
+    eliminarCuenta: 'Delete account permanently',
+
+    copiarEmail: 'Copy email',
+    nombre: 'Name',
+    apellido: 'Last name',
+    email: 'Email',
+    fechaRegistro: 'Registration Date',
+    suscrito: 'Subscribed',
+    si: 'Yes',
+    no: 'No',
+
+    organizaDescription: 'Organize your tasks and school materials with artificial intelligence',
   },
   pt: {
-    // Greetings
     buenasDias: 'Bom dia',
     buenasTardes: 'Boa tarde',
     buenasNoches: 'Boa noite',
-    
-    // Navigation
+
     inicio: 'Início',
     tareas: 'Tarefas',
     materias: 'Matérias',
     chat: 'Chat',
     perfil: 'Perfil',
-    
-    // Dashboard
+
     hoy: 'Hoje',
+    manana: 'Amanhã',
     pendientes: 'Pendentes',
     proximasTareas: 'Próximas tarefas',
     estaSemana: 'Esta semana',
@@ -140,16 +360,30 @@ export const translations = {
     tareaPlural: 'tarefas',
     verTodas: 'Ver todas',
     verMasSemanas: 'Ver mais semanas',
-    
-    // Agenda upload
+    sinMateria: 'Sem matéria',
+
+    examen: 'Prova',
+    proyecto: 'Projeto',
+    tareaType: 'Tarefa',
+
     subeAgendas: 'Envie seus cronogramas',
     multiplesArchivos: 'Múltiplos PDFs ou DOCXs',
     arrastraArchivos: 'Arraste seus arquivos aqui',
     agregarMasArchivos: 'Adicionar mais arquivos',
     oToca: 'ou toque para selecionar vários',
     pdfODocx: 'PDF ou DOCX',
-    
-    // Settings
+    soloPermitidos: 'Apenas arquivos PDF ou DOCX são permitidos',
+    completaMateria: 'Complete a matéria de todas as tarefas antes de salvar',
+    agendaProcesada: 'Cronograma processado',
+    noAutenticado: 'Não autenticado',
+    errorProcesar: 'Erro ao processar',
+    errorDesconocido: 'Erro desconhecido',
+    errorGuardar: 'Erro ao salvar',
+    ocultarPdf: 'Ocultar',
+    verPdf: 'Ver PDF',
+    vistaPrevia: 'Pré-visualização do documento',
+    tituloTarea: 'Título da tarefa',
+
     configuracion: 'Configurações',
     personalizaEstilo: 'Personalize o estilo do ClearGrade',
     apariencia: 'Aparência',
@@ -170,15 +404,104 @@ export const translations = {
     cancelar: 'Cancelar',
     guardarCambios: 'Salvar alterações',
     guardado: 'Salvo',
+    guardando: 'Salvando...',
+    guardarColor: 'Salvar cor',
     informacionEscolar: 'Informações escolares',
+    tuInstitucion: 'Sua instituição determina quais cronogramas são compartilhados com você',
     institucionEducativa: 'Instituição educacional',
+    seleccionaInstitucion: 'Selecione ou crie sua instituição',
+    nombreInstitucion: 'Nome da instituição',
     grado: 'Série',
     seccion: 'Turma',
+
+    claro: 'Claro',
+    auto: 'Auto',
+    oscuro: 'Escuro',
+    modoColor: 'Modo de cor',
+
+    crearCuenta: 'Criar conta',
+    iniciarSesion: 'Entrar',
+    tuNombre: 'Seu nome',
+    tuApellido: 'Seu sobrenome',
+    tuContrasena: 'Sua senha',
+    enviarInstrucciones: 'Enviar instruções',
+    actualizarContrasena: 'Atualizar Senha',
+    tuNuevaContrasena: 'Sua nova senha',
+    confirmaContrasena: 'Confirme sua senha',
+    nombreNoPermitido: 'O nome contém palavras não permitidas',
+    institucionNoPermitida: 'O nome da instituição contém palavras não permitidas',
+    seleccionaInstitucionError: 'Por favor selecione ou crie sua instituição',
+
+    nombreTarea: 'Nome da tarefa',
+    guardar: 'Salvar',
+    eliminarTarea: 'Excluir tarefa',
+    entrega: 'Entrega',
+
+    nombreMateria: 'Nome da matéria',
+
+    sinMaterias: 'Sem matérias registradas',
+    sinTareasPendientes: 'Sem tarefas pendentes',
+    adjuntarArchivo: 'Anexar imagem ou documento',
+    abrirChat: 'Abrir chat',
+
+    usuario: 'Usuário',
+    estudiante: 'Estudante',
+
+    organizadoPorSemana: 'Organizado por semana',
+    materialesOrganizados: 'Materiais organizados',
+    progresoVisible: 'Progresso visível',
+
+    planFree: 'Free',
+    planPro: 'Pro',
+    planPremium: 'Premium',
+    perfectoParaEmpezar: 'Perfeito para começar',
+    paraEstudiantes: 'Para estudantes dedicados',
+    paraMaximoRendimiento: 'Para máximo desempenho',
+    conAnuncios: 'Com anúncios',
+    sinAnuncios: 'Sem anúncios',
+    soportePrioritario: 'Suporte prioritário',
+    tareasIlimitadas: 'Tarefas ilimitadas',
+    materiasIlimitadas: 'Matérias ilimitadas',
+    soporteVip: 'Suporte VIP',
+    analyticsAvanzados: 'Analytics avançados',
+    planActual: 'Plano atual',
+    contratar: 'Assinar',
+    actualizarPro: 'Atualizar para Pro',
+    actualizarUltra: 'Atualizar para Ultra',
+    cargando: 'Carregando...',
+
+    configurada: 'Configurada',
+    noConfigurada: 'Não configurada',
+    guardarClave: 'Salvar chave',
+    errorGuardarClave: 'Erro ao salvar a chave',
+    crearClaveApi: 'Criar chave de API',
+
+    completaCampos: 'Por favor complete todos os campos',
+    errorEnviarReporte: 'Erro ao enviar o relatório',
+    copiarCodigo: 'Copiar código',
+
+    contrasenaActualizada: 'Senha atualizada com sucesso',
+    emailInvalido: 'Email inválido',
+    emailEnProceso: 'Alteração de email em andamento',
+    actualizarContrasenaBtn: 'Atualizar senha',
+    cambiarCorreoBtn: 'Alterar email',
+    eliminarCuenta: 'Excluir conta permanentemente',
+
+    copiarEmail: 'Copiar email',
+    nombre: 'Nome',
+    apellido: 'Sobrenome',
+    email: 'Email',
+    fechaRegistro: 'Data de Registro',
+    suscrito: 'Inscrito',
+    si: 'Sim',
+    no: 'Não',
+
+    organizaDescription: 'Organize suas tarefas e materiais escolares com inteligência artificial',
   },
 }
 
 export type TranslationKey = keyof typeof translations.es
 
 export function getTranslation(language: Language, key: TranslationKey): string {
-  return translations[language][key] || translations.es[key] || key
+  return translations[language]?.[key] || translations.es[key] || key
 }

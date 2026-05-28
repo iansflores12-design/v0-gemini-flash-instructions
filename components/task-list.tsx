@@ -10,6 +10,7 @@ import type { Task, Subject } from '@/lib/types'
 import { getTaskDescription, getTaskValue } from '@/lib/types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { useLanguage } from '@/components/language-provider'
 
 interface TaskListProps {
   tasks: Task[]

@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createTask } from '@/lib/actions'
 import type { Subject } from '@/lib/types'
+import { useLanguage } from '@/components/language-provider'
 
 interface AddTaskButtonProps {
   subjects: Subject[]
 }
 
 export function AddTaskButton({ subjects }: AddTaskButtonProps) {
+  const { t } = useLanguage()
   const [isOpen, setIsOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [dueDate, setDueDate] = useState('')
@@ -41,7 +43,7 @@ export function AddTaskButton({ subjects }: AddTaskButtonProps) {
         className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
       >
         <Plus className="w-5 h-5 mr-2" />
-        Agregar tarea
+        {t('agregarTarea')}
       </Button>
     )
   }
@@ -49,7 +51,7 @@ export function AddTaskButton({ subjects }: AddTaskButtonProps) {
   return (
     <form onSubmit={handleSubmit} className="p-4 rounded-2xl bg-card border border-border space-y-4 animate-scale-in">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium text-foreground">Nueva tarea</h3>
+        <h3 className="font-medium text-foreground">{t('nuevaTarea')}</h3>
         <button
           type="button"
           onClick={() => setIsOpen(false)}
@@ -61,7 +63,7 @@ export function AddTaskButton({ subjects }: AddTaskButtonProps) {
 
       <div className="space-y-3">
         <Input
-          placeholder="Nombre de la tarea"
+          placeholder={t('nombreTarea')}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="h-12 rounded-xl bg-background"
@@ -85,7 +87,7 @@ export function AddTaskButton({ subjects }: AddTaskButtonProps) {
             onChange={(e) => setSubjectId(e.target.value)}
             className="w-full h-12 rounded-xl bg-background border border-input px-3 text-foreground"
           >
-            <option value="">Sin materia</option>
+            <option value="">{t('sinMateria')}</option>
             {subjects.map((subject) => (
               <option key={subject.id} value={subject.id}>
                 {subject.name}
@@ -102,14 +104,14 @@ export function AddTaskButton({ subjects }: AddTaskButtonProps) {
           onClick={() => setIsOpen(false)}
           className="flex-1 h-11 rounded-xl"
         >
-          Cancelar
+          {t('cancelar')}
         </Button>
         <Button
           type="submit"
           disabled={loading || !title.trim() || !dueDate}
           className="flex-1 h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
         >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Guardar'}
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('guardar')}
         </Button>
       </div>
     </form>
