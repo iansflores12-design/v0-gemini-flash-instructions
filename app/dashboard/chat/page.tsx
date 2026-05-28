@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { getTasks, getSubjects } from '@/lib/actions'
 import { Send, MessageCircle, Loader } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useLanguage } from '@/components/language-provider'
 
 interface Message {
   id: string
@@ -13,12 +14,73 @@ interface Message {
 }
 
 export default function ChatPage() {
+  const { language } = useLanguage()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [contextLoaded, setContextLoaded] = useState(false)
   const [context, setContext] = useState<string>('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const ui = {
+    es: {
+      noSubject: 'Sin materia',
+      studentContext: 'Contexto del estudiante',
+      subjects: 'Materias',
+      noSubjects: 'Sin materias registradas',
+      pendingTasks: 'Tareas pendientes',
+      noPendingTasks: 'Sin tareas pendientes',
+      totalTasks: 'Total de tareas',
+      defaultAssistantReply: 'No pude procesar tu mensaje.',
+      genericErrorReply: 'Lo siento, ocurrio un error. Intenta de nuevo.',
+      assistantSubtitle: 'Asistente de estudio',
+      emptyTitle: 'Hola! Soy ClearGrade AI',
+      emptyDescription: 'Puedo ayudarte con tus materias, tareas y dudas academicas. Preguntame cualquier cosa sobre tu estudio.',
+      hasContext: 'Tengo acceso a tu informacion de clases y tareas',
+      typing: 'Escribiendo...',
+      inputPlaceholder: 'Escribe tu pregunta aqui...',
+      duePrefix: 'Entrega',
+      locale: 'es-ES',
+    },
+    en: {
+      noSubject: 'No subject',
+      studentContext: 'Student context',
+      subjects: 'Subjects',
+      noSubjects: 'No subjects registered',
+      pendingTasks: 'Pending tasks',
+      noPendingTasks: 'No pending tasks',
+      totalTasks: 'Total tasks',
+      defaultAssistantReply: 'I could not process your message.',
+      genericErrorReply: 'Sorry, an error occurred. Please try again.',
+      assistantSubtitle: 'Study assistant',
+      emptyTitle: 'Hi! I am ClearGrade AI',
+      emptyDescription: 'I can help you with subjects, tasks, and academic questions. Ask me anything about your study plan.',
+      hasContext: 'I have access to your classes and tasks information',
+      typing: 'Typing...',
+      inputPlaceholder: 'Type your question here...',
+      duePrefix: 'Due',
+      locale: 'en-US',
+    },
+    pt: {
+      noSubject: 'Sem materia',
+      studentContext: 'Contexto do estudante',
+      subjects: 'Materias',
+      noSubjects: 'Sem materias registradas',
+      pendingTasks: 'Tarefas pendentes',
+      noPendingTasks: 'Sem tarefas pendentes',
+      totalTasks: 'Total de tarefas',
+      defaultAssistantReply: 'Nao consegui processar sua mensagem.',
+      genericErrorReply: 'Desculpe, ocorreu um erro. Tente novamente.',
+      assistantSubtitle: 'Assistente de estudo',
+      emptyTitle: 'Ola! Eu sou o ClearGrade AI',
+      emptyDescription: 'Posso te ajudar com materias, tarefas e duvidas academicas. Pergunte qualquer coisa sobre seus estudos.',
+      hasContext: 'Tenho acesso as suas informacoes de aulas e tarefas',
+      typing: 'Digitando...',
+      inputPlaceholder: 'Escreva sua pergunta aqui...',
+      duePrefix: 'Entrega',
+      locale: 'pt-BR',
+    },
+  }[language]
 
   // Load user data context
   useEffect(() => {
@@ -34,16 +96,16 @@ export default function ChatPage() {
           .slice(0, 5)
           .map(t => {
             const subject = subjects.find(s => s.id === t.subject_id)
-            return `- ${t.title} (${subject?.name || 'Sin materia'}) - Entrega: ${t.due_date}`
+            return `- ${t.title} (${subject?.name || ui.noSubject}) - ${ui.duePrefix}: ${t.due_date}`
           })
           .join('\n')
 
         const subjectsInfo = subjects.map(s => `- ${s.name}`).join('\n')
 
-        const contextStr = `Contexto del estudiante:
-Materias: ${subjects.length > 0 ? '\n' + subjectsInfo : 'Sin materias registradas'}
-Tareas pendientes: ${tasks.filter(t => !t.is_done).length > 0 ? '\n' + tasksInfo : 'Sin tareas pendientes'}
-Total de tareas: ${tasks.length}`
+        const contextStr = `${ui.studentContext}:
+${ui.subjects}: ${subjects.length > 0 ? '\n' + subjectsInfo : ui.noSubjects}
+${ui.pendingTasks}: ${tasks.filter(t => !t.is_done).length > 0 ? '\n' + tasksInfo : ui.noPendingTasks}
+${ui.totalTasks}: ${tasks.length}`
 
         setContext(contextStr)
         setContextLoaded(true)
@@ -99,7 +161,7 @@ Total de tareas: ${tasks.length}`
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.reply || 'No pude procesar tu mensaje.',
+        content: data.reply || ui.defaultAssistantReply,
         timestamp: new Date()
       }
 
@@ -109,7 +171,7 @@ Total de tareas: ${tasks.length}`
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
         role: 'assistant',
-        content: 'Lo siento, ocurrió un error. Intenta de nuevo.',
+        content: ui.genericErrorReply,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
@@ -128,7 +190,7 @@ Total de tareas: ${tasks.length}`
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground">ClearGrade AI</h1>
-            <p className="text-xs text-muted-foreground">Asistente de estudio</p>
+            <p className="text-xs text-muted-foreground">{ui.assistantSubtitle}</p>
           </div>
         </div>
       </header>
@@ -140,13 +202,13 @@ Total de tareas: ${tasks.length}`
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
               <MessageCircle className="w-8 h-8 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground mb-2">Hola! Soy ClearGrade AI</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-2">{ui.emptyTitle}</h2>
             <p className="text-muted-foreground max-w-xs">
-              Puedo ayudarte con tus materias, tareas y dudas academicas. Preguntame cualquier cosa sobre tu estudio.
+              {ui.emptyDescription}
             </p>
             {context && (
               <p className="text-xs text-muted-foreground mt-4">
-                ✓ Tengo acceso a tu informacion de clases y tareas
+                ✓ {ui.hasContext}
               </p>
             )}
           </div>
@@ -168,7 +230,7 @@ Total de tareas: ${tasks.length}`
                 {message.content}
               </p>
               <span className="text-xs opacity-70 mt-1 block">
-                {message.timestamp.toLocaleTimeString('es-ES', {
+                {message.timestamp.toLocaleTimeString(ui.locale, {
                   hour: '2-digit',
                   minute: '2-digit'
                 })}
@@ -182,7 +244,7 @@ Total de tareas: ${tasks.length}`
             <div className="bg-secondary text-secondary-foreground px-4 py-3 rounded-2xl rounded-bl-none">
               <div className="flex items-center gap-2">
                 <Loader className="w-4 h-4 animate-spin" />
-                <span className="text-sm">Escribiendo...</span>
+                <span className="text-sm">{ui.typing}</span>
               </div>
             </div>
           </div>
@@ -203,7 +265,7 @@ Total de tareas: ${tasks.length}`
                 handleSendMessage(e as any)
               }
             }}
-            placeholder="Escribe tu pregunta aqui..."
+            placeholder={ui.inputPlaceholder}
             className="flex-1 resize-none rounded-xl border border-border bg-card px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary max-h-24"
             rows={1}
             disabled={loading || !contextLoaded}

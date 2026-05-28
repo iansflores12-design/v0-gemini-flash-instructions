@@ -3,23 +3,25 @@
 import { Sun, Moon, SunMoon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/components/theme-provider'
+import { useLanguage } from '@/components/language-provider'
 
 type DarkMode = 'light' | 'dark' | 'auto'
 
-const options: { mode: DarkMode; icon: React.ReactNode; label: string }[] = [
-  { mode: 'light', icon: <Sun className="w-4 h-4" />, label: 'Claro' },
-  { mode: 'auto',  icon: <SunMoon className="w-4 h-4" />, label: 'Auto' },
-  { mode: 'dark',  icon: <Moon className="w-4 h-4" />, label: 'Oscuro' },
-]
-
 export function DarkModeToggle() {
   const { darkMode, setDarkMode } = useTheme()
+  const { t } = useLanguage()
+
+  const options: { mode: DarkMode; icon: React.ReactNode; label: string }[] = [
+    { mode: 'light', icon: <Sun className="w-4 h-4" />, label: t('claro') },
+    { mode: 'auto',  icon: <SunMoon className="w-4 h-4" />, label: t('auto') },
+    { mode: 'dark',  icon: <Moon className="w-4 h-4" />, label: t('oscuro') },
+  ]
 
   return (
     <div
       className="inline-flex items-center gap-0.5 p-1 rounded-full bg-muted/80 border border-border/60 shadow-sm backdrop-blur-sm"
       role="group"
-      aria-label="Modo de color"
+      aria-label={t('modoColor')}
     >
       {options.map(({ mode: m, icon, label }) => (
         <button

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/components/theme-provider'
+import { useLanguage } from '@/components/language-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Check, Palette, Lock, X, School, ChevronDown, Search, Plus, Loader2, Save } from 'lucide-react'
+import { Check, Palette, Lock, X, School, ChevronDown, Search, Plus, Loader2, Save, Globe, Mail, Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -24,6 +25,155 @@ export default function SettingsPage() {
     customColor: activeCustomColor, 
     setCustomColor: applyCustomColor 
   } = useTheme()
+  const { language, setLanguage, t } = useLanguage()
+  const ui = {
+    es: {
+      title: 'Configuracion',
+      subtitle: 'Personaliza el estilo de ClearGrade',
+      sectionsAria: 'Secciones de ajustes',
+      appearance: 'Apariencia',
+      security: 'Seguridad',
+      colorMode: 'Modo de color',
+      presetThemes: 'Temas predefinidos',
+      materialCustomization: 'Personalizacion Material',
+      quickPresets: 'Presets Rapidos',
+      schoolInfo: 'Informacion escolar',
+      institutionHelp: 'Tu institucion determina que agendas se comparten contigo',
+      institution: 'Institucion educativa',
+      selectOrCreateInstitution: 'Selecciona o crea tu institucion',
+      searchInstitution: 'Buscar institucion...',
+      loading: 'Cargando...',
+      noInstitutionsFound: 'No se encontraron instituciones',
+      noInstitutionsYet: 'No hay instituciones aun',
+      institutionName: 'Nombre de tu institucion',
+      use: 'Usar',
+      addNewInstitution: 'Agregar nueva institucion',
+      grade: 'Grado',
+      section: 'Seccion',
+      gradeExample: 'Ej: 11',
+      sectionExample: 'Ej: A',
+      spanish: 'Español',
+      english: 'English',
+      portuguese: 'Português',
+    },
+    en: {
+      title: 'Settings',
+      subtitle: 'Customize ClearGrade style',
+      sectionsAria: 'Settings sections',
+      appearance: 'Appearance',
+      security: 'Security',
+      colorMode: 'Color mode',
+      presetThemes: 'Preset themes',
+      materialCustomization: 'Material customization',
+      quickPresets: 'Quick presets',
+      schoolInfo: 'School information',
+      institutionHelp: 'Your institution determines which schedules are shared with you',
+      institution: 'Educational institution',
+      selectOrCreateInstitution: 'Select or create your institution',
+      searchInstitution: 'Search institution...',
+      loading: 'Loading...',
+      noInstitutionsFound: 'No institutions found',
+      noInstitutionsYet: 'No institutions yet',
+      institutionName: 'Institution name',
+      use: 'Use',
+      addNewInstitution: 'Add new institution',
+      grade: 'Grade',
+      section: 'Section',
+      gradeExample: 'Ex: 11',
+      sectionExample: 'Ex: A',
+      spanish: 'Spanish',
+      english: 'English',
+      portuguese: 'Portuguese',
+    },
+    pt: {
+      title: 'Configuracoes',
+      subtitle: 'Personalize o estilo do ClearGrade',
+      sectionsAria: 'Secoes de ajustes',
+      appearance: 'Aparencia',
+      security: 'Seguranca',
+      colorMode: 'Modo de cor',
+      presetThemes: 'Temas predefinidos',
+      materialCustomization: 'Personalizacao Material',
+      quickPresets: 'Presets Rapidos',
+      schoolInfo: 'Informacoes escolares',
+      institutionHelp: 'Sua instituicao determina quais cronogramas sao compartilhados com voce',
+      institution: 'Instituicao educacional',
+      selectOrCreateInstitution: 'Selecione ou crie sua instituicao',
+      searchInstitution: 'Buscar instituicao...',
+      loading: 'Carregando...',
+      noInstitutionsFound: 'Nenhuma instituicao encontrada',
+      noInstitutionsYet: 'Ainda nao ha instituicoes',
+      institutionName: 'Nome da instituicao',
+      use: 'Usar',
+      addNewInstitution: 'Adicionar nova instituicao',
+      grade: 'Serie',
+      section: 'Turma',
+      gradeExample: 'Ex: 11',
+      sectionExample: 'Ex: A',
+      spanish: 'Espanhol',
+      english: 'Ingles',
+      portuguese: 'Portugues',
+    },
+  }[language]
+
+  const themeText: Record<string, { es: { name: string; description: string }; en: { name: string; description: string }; pt: { name: string; description: string } }> = {
+    m3e: {
+      es: { name: 'Material 3', description: 'Paleta verde ClearGrade, color personalizable' },
+      en: { name: 'Material 3', description: 'ClearGrade green palette, customizable color' },
+      pt: { name: 'Material 3', description: 'Paleta verde ClearGrade, cor personalizavel' },
+    },
+    forest: {
+      es: { name: 'Forest & Moss', description: 'Verdes organicos para una agenda fisica moderna' },
+      en: { name: 'Forest & Moss', description: 'Organic greens for a modern physical planner' },
+      pt: { name: 'Forest & Moss', description: 'Verdes organicos para uma agenda fisica moderna' },
+    },
+    midnight: {
+      es: { name: 'Midnight Corporate', description: 'Azul profundo y profesional' },
+      en: { name: 'Midnight Corporate', description: 'Deep and professional blue' },
+      pt: { name: 'Midnight Corporate', description: 'Azul profundo e profissional' },
+    },
+    cyber: {
+      es: { name: 'Nothing Concept', description: 'Negro puro, acentos rojos y tipografia blanca' },
+      en: { name: 'Nothing Concept', description: 'Pure black, red accents, and white typography' },
+      pt: { name: 'Nothing Concept', description: 'Preto puro, acentos vermelhos e tipografia branca' },
+    },
+    sunset: {
+      es: { name: 'Sunset Soft', description: 'Calido y energetico - reduce fatiga visual' },
+      en: { name: 'Sunset Soft', description: 'Warm and energetic - reduces visual fatigue' },
+      pt: { name: 'Sunset Soft', description: 'Quente e energetico - reduz fadiga visual' },
+    },
+    mono: {
+      es: { name: 'Mono-Architectural', description: 'Minimalismo puro en escala de grises' },
+      en: { name: 'Mono-Architectural', description: 'Pure minimalism in grayscale' },
+      pt: { name: 'Mono-Architectural', description: 'Minimalismo puro em escala de cinza' },
+    },
+    ocean: {
+      es: { name: 'Ocean', description: 'Azules oceanicos y profundos' },
+      en: { name: 'Ocean', description: 'Deep ocean blues' },
+      pt: { name: 'Ocean', description: 'Azuis oceanicos e profundos' },
+    },
+    rose: {
+      es: { name: 'Rose', description: 'Tonos rosados y calidos' },
+      en: { name: 'Rose', description: 'Warm pink tones' },
+      pt: { name: 'Rose', description: 'Tons rosados e quentes' },
+    },
+    slate: {
+      es: { name: 'Slate', description: 'Gris neutro y profesional' },
+      en: { name: 'Slate', description: 'Neutral and professional gray' },
+      pt: { name: 'Slate', description: 'Cinza neutro e profissional' },
+    },
+    amber: {
+      es: { name: 'Amber', description: 'Dorado calido y energetico' },
+      en: { name: 'Amber', description: 'Warm and energetic golden tone' },
+      pt: { name: 'Amber', description: 'Dourado quente e energetico' },
+    },
+  }
+
+  const getThemeText = (id: string, fallbackName: string, fallbackDescription: string) => {
+    const text = themeText[id]
+    if (!text) return { name: fallbackName, description: fallbackDescription }
+    return text[language]
+  }
 
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<'appearance' | 'security'>('appearance')
@@ -174,14 +324,14 @@ export default function SettingsPage() {
 
       <div className="max-w-6xl mx-auto p-4 sm:p-6 sm:pt-8">
         <div className="mb-8 space-y-1">
-          <h1 className="text-4xl font-medium tracking-tight text-foreground">Configuracion</h1>
-          <p className="text-base text-muted-foreground">Personaliza el estilo de ClearGrade</p>
+          <h1 className="text-4xl font-medium tracking-tight text-foreground">{ui.title}</h1>
+          <p className="text-base text-muted-foreground">{ui.subtitle}</p>
         </div>
 
         <div
           className="mb-8 flex flex-wrap gap-1 rounded-full bg-muted/70 p-1.5 ring-1 ring-border/60 shadow-sm backdrop-blur-sm"
           role="tablist"
-          aria-label="Secciones de ajustes"
+          aria-label={ui.sectionsAria}
         >
           <button
             type="button"
@@ -196,7 +346,7 @@ export default function SettingsPage() {
             )}
           >
             <Palette className="w-4 h-4 shrink-0" />
-            Apariencia
+            {ui.appearance}
           </button>
           <button
             type="button"
@@ -211,14 +361,14 @@ export default function SettingsPage() {
             )}
           >
             <Lock className="w-4 h-4 shrink-0" />
-            Seguridad
+            {ui.security}
           </button>
         </div>
 
         {activeTab === 'appearance' && (
           <div className="space-y-10">
             <section className="space-y-4">
-              <h2 className="text-xl font-medium text-foreground">Modo de color</h2>
+              <h2 className="text-xl font-medium text-foreground">{ui.colorMode}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {(['light', 'dark', 'auto'] as const).map((mode) => (
                   <button
@@ -242,39 +392,41 @@ export default function SettingsPage() {
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-xl font-medium text-foreground">Temas predefinidos</h2>
+              <h2 className="text-xl font-medium text-foreground">{ui.presetThemes}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {themes.map((t) => (
+                {themes.map((themeOption) => {
+                  const localized = getThemeText(themeOption.id, themeOption.name, themeOption.description)
+                  return (
                   <button
-                    key={t.id}
+                    key={themeOption.id}
                     type="button"
-                    onClick={() => handleThemeChange(t.id)}
+                    onClick={() => handleThemeChange(themeOption.id)}
                     className={cn(
                       'p-5 rounded-[1.75rem] border text-left shadow-sm transition-all duration-200',
-                      theme?.id === t.id
+                      theme?.id === themeOption.id
                         ? 'border-outline-variant bg-muted/70 ring-1 ring-primary/18'
                         : 'border-border/80 bg-card hover:border-primary/25 hover:shadow-md'
                     )}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-foreground">{t.name}</h3>
-                        <p className="text-xs text-muted-foreground mt-1">{t.description}</p>
+                        <h3 className="font-semibold text-foreground">{localized.name}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">{localized.description}</p>
                       </div>
-                      {theme?.id === t.id && <Check className="w-4 h-4 text-primary/85" />}
+                      {theme?.id === themeOption.id && <Check className="w-4 h-4 text-primary/85" />}
                     </div>
                     <div className="flex gap-2">
-                      {Object.values(t.preview || {}).slice(0, 3).map((color, i) => (
+                      {Object.values(themeOption.preview || {}).slice(0, 3).map((color, i) => (
                         <div key={i} className="w-6 h-6 rounded-full shadow-sm" style={{ background: color as string }} />
                       ))}
                     </div>
                   </button>
-                ))}
+                )})}
               </div>
             </section>
 
             <section className={cn("space-y-6 pt-8 border-t border-border", !isMaterialTheme && "opacity-40 grayscale pointer-events-none")}>
-              <h2 className="text-xl font-medium text-foreground">Personalizacion Material</h2>
+              <h2 className="text-xl font-medium text-foreground">{ui.materialCustomization}</h2>
               <div className="flex flex-col sm:flex-row items-center gap-8">
                 <div className="relative w-24 h-24 rounded-3xl border-4 border-border shadow-xl overflow-hidden" style={{ backgroundColor: pickerColor }}>
                   <input
@@ -285,7 +437,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="flex-1 space-y-3">
-                  <p className="text-xs font-bold text-muted-foreground uppercase">Presets Rapidos</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase">{ui.quickPresets}</p>
                   <div className="flex flex-wrap gap-2">
                     {['#516435', '#7C4DFF', '#FF5252', '#40C4FF', '#FFD740'].map((c) => (
                       <button
@@ -309,9 +461,9 @@ export default function SettingsPage() {
           <div className="space-y-10">
             {/* Institution Section */}
             <section className="space-y-4">
-              <h2 className="text-xl font-medium text-foreground">Informacion escolar</h2>
+              <h2 className="text-xl font-medium text-foreground">{ui.schoolInfo}</h2>
               <p className="text-sm text-muted-foreground">
-                Tu institucion determina que agendas se comparten contigo
+                {ui.institutionHelp}
               </p>
 
               {loadingProfile ? (
@@ -323,7 +475,7 @@ export default function SettingsPage() {
                   {/* Institution Selector */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">
-                      Institucion educativa
+                      {ui.institution}
                     </label>
                     <div className="relative">
                       <button
@@ -334,7 +486,7 @@ export default function SettingsPage() {
                         <div className="flex items-center gap-3">
                           <School className="w-5 h-5 text-muted-foreground" />
                           <span className={selectedInstitution || newInstitutionName ? 'text-foreground' : 'text-muted-foreground'}>
-                            {selectedInstitution?.name || newInstitutionName || 'Selecciona o crea tu institucion'}
+                            {selectedInstitution?.name || newInstitutionName || ui.selectOrCreateInstitution}
                           </span>
                         </div>
                         <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
@@ -348,7 +500,7 @@ export default function SettingsPage() {
                               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                               <Input
                                 type="text"
-                                placeholder="Buscar institucion..."
+                                placeholder={ui.searchInstitution}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-9 h-10 rounded-lg bg-secondary/50 border-0"
@@ -362,7 +514,7 @@ export default function SettingsPage() {
                             {loadingInstitutions ? (
                               <div className="px-4 py-3 text-center text-muted-foreground">
                                 <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
-                                Cargando...
+                                {ui.loading}
                               </div>
                             ) : filteredInstitutions.length > 0 ? (
                               filteredInstitutions.map((inst) => (
@@ -387,11 +539,11 @@ export default function SettingsPage() {
                               ))
                             ) : searchQuery ? (
                               <div className="px-4 py-3 text-muted-foreground text-sm text-center">
-                                No se encontraron instituciones
+                                {ui.noInstitutionsFound}
                               </div>
                             ) : (
                               <div className="px-4 py-3 text-muted-foreground text-sm text-center">
-                                No hay instituciones aun
+                                {ui.noInstitutionsYet}
                               </div>
                             )}
                           </div>
@@ -402,7 +554,7 @@ export default function SettingsPage() {
                               <div className="flex gap-2">
                                 <Input
                                   type="text"
-                                  placeholder="Nombre de tu institucion"
+                                  placeholder={ui.institutionName}
                                   value={newInstitutionName}
                                   onChange={(e) => setNewInstitutionName(e.target.value)}
                                   className="h-10 rounded-lg bg-secondary/50 border-0 flex-1"
@@ -422,7 +574,7 @@ export default function SettingsPage() {
                                   className="rounded-lg px-4"
                                   disabled={!newInstitutionName.trim()}
                                 >
-                                  Usar
+                                  {ui.use}
                                 </Button>
                               </div>
                             ) : (
@@ -432,7 +584,7 @@ export default function SettingsPage() {
                                 className="w-full px-4 py-2.5 text-left hover:bg-secondary/50 transition-colors flex items-center gap-3 text-primary rounded-lg"
                               >
                                 <Plus className="w-4 h-4" />
-                                <span className="font-medium">Agregar nueva institucion</span>
+                                <span className="font-medium">{ui.addNewInstitution}</span>
                               </button>
                             )}
                           </div>
@@ -445,12 +597,12 @@ export default function SettingsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label htmlFor="grade" className="text-sm font-medium text-foreground">
-                        Grado
+                        {ui.grade}
                       </label>
                       <Input
                         id="grade"
                         type="text"
-                        placeholder="Ej: 11"
+                        placeholder={ui.gradeExample}
                         value={grade}
                         onChange={(e) => setGrade(e.target.value)}
                         className="h-12 rounded-xl bg-card border-border focus:border-primary"
@@ -458,12 +610,12 @@ export default function SettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <label htmlFor="section" className="text-sm font-medium text-foreground">
-                        Seccion
+                        {ui.section}
                       </label>
                       <Input
                         id="section"
                         type="text"
-                        placeholder="Ej: A"
+                        placeholder={ui.sectionExample}
                         value={section}
                         onChange={(e) => setSection(e.target.value)}
                         className="h-12 rounded-xl bg-card border-border focus:border-primary"
@@ -482,17 +634,50 @@ export default function SettingsPage() {
                     ) : profileSaved ? (
                       <>
                         <Check className="w-5 h-5 mr-2" />
-                        Guardado
+                        {t('guardado')}
                       </>
                     ) : (
                       <>
                         <Save className="w-5 h-5 mr-2" />
-                        Guardar cambios
+                        {t('guardarCambios')}
                       </>
                     )}
                   </Button>
                 </div>
               )}
+            </section>
+
+            {/* Language Section */}
+            <section className="space-y-4 border-t border-border pt-6">
+              <h2 className="text-xl font-medium text-foreground flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                {t('idioma')}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {t('seleccionaIdioma')}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {(['es', 'en', 'pt'] as const).map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => setLanguage(lang)}
+                    className={cn(
+                      'p-5 rounded-[1.75rem] border text-left shadow-sm transition-all duration-200',
+                      language === lang
+                        ? 'border-border bg-muted/70 ring-1 ring-primary/20'
+                        : 'border-border/80 bg-card hover:border-primary/25 hover:shadow-md'
+                    )}
+                  >
+                    <div className="flex items-start justify-between text-foreground">
+                      <span className="font-medium">
+                        {lang === 'es' ? ui.spanish : lang === 'en' ? ui.english : ui.portuguese}
+                      </span>
+                      {language === lang && <Check className="w-4 h-4 text-primary" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </section>
           </div>
         )}

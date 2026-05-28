@@ -2,8 +2,10 @@ import { getSubjects, getTasks } from '@/lib/actions'
 import { BookOpen } from 'lucide-react'
 import { AddSubjectButton } from '@/components/add-subject-button'
 import { SubjectCard } from '@/components/subject-card'
+import { getServerLanguage, pickLocalized } from '@/lib/localized'
 
 export default async function SubjectsPage() {
+  const language = await getServerLanguage()
   const [subjects, tasks] = await Promise.all([
     getSubjects(),
     getTasks()
@@ -21,9 +23,11 @@ export default async function SubjectsPage() {
             <BookOpen className="w-5 h-5 text-chart-3" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Materias</h1>
+            <h1 className="text-2xl font-bold text-foreground">{pickLocalized(language, { es: 'Materias', en: 'Subjects', pt: 'Materias' })}</h1>
             <p className="text-sm text-muted-foreground">
-              {subjects.length} {subjects.length === 1 ? 'materia registrada' : 'materias registradas'}
+              {subjects.length} {subjects.length === 1
+                ? pickLocalized(language, { es: 'materia registrada', en: 'subject registered', pt: 'materia registrada' })
+                : pickLocalized(language, { es: 'materias registradas', en: 'subjects registered', pt: 'materias registradas' })}
             </p>
           </div>
         </div>
@@ -47,9 +51,9 @@ export default async function SubjectsPage() {
             <div className="w-12 h-12 rounded-xl bg-secondary mx-auto mb-3 flex items-center justify-center">
               <BookOpen className="w-6 h-6 text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground">Aun no tienes materias</p>
+            <p className="text-muted-foreground">{pickLocalized(language, { es: 'Aun no tienes materias', en: 'You do not have subjects yet', pt: 'Voce ainda nao tem materias' })}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Agrega tu primera materia para organizar tus tareas
+              {pickLocalized(language, { es: 'Agrega tu primera materia para organizar tus tareas', en: 'Add your first subject to organize your tasks', pt: 'Adicione sua primeira materia para organizar suas tarefas' })}
             </p>
           </div>
         )}

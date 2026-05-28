@@ -8,6 +8,8 @@ import { Mail, Lock, User, Eye, EyeOff, Loader2, School, Plus, ChevronDown, Sear
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ClearGradeLogo } from '@/components/cleargrade-logo'
+import { LanguageSwitcher } from '@/components/language-switcher'
+import { useLanguage } from '@/components/language-provider'
 
 interface Institution {
   id: string
@@ -29,6 +31,7 @@ function containsProfanity(text: string): boolean {
 }
 
 export default function SignUpPage() {
+  const { language } = useLanguage()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -172,14 +175,19 @@ export default function SignUpPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
+      {/* Language Switcher - Top Right */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
+
       <div className="w-full max-w-sm animate-slide-up">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="mb-4">
             <ClearGradeLogo size="md" />
           </div>
-          <h1 className="text-2xl font-semibold text-foreground">Crear cuenta</h1>
-          <p className="text-muted-foreground mt-1">Unete a ClearGrade</p>
+          <h1 className="text-2xl font-semibold text-foreground">{language === 'en' ? 'Create account' : language === 'pt' ? 'Criar conta' : 'Crear cuenta'}</h1>
+          <p className="text-muted-foreground mt-1">{language === 'en' ? 'Join ClearGrade' : language === 'pt' ? 'Junte-se ao ClearGrade' : 'Unete a ClearGrade'}</p>
         </div>
 
         {/* Form */}
@@ -194,14 +202,14 @@ export default function SignUpPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <label htmlFor="firstName" className="text-sm font-medium text-foreground">
-                Nombre
+                {language === 'en' ? 'First name' : language === 'pt' ? 'Nome' : 'Nombre'}
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="firstName"
                   type="text"
-                  placeholder="Tu nombre"
+                  placeholder={language === 'en' ? 'Your name' : language === 'pt' ? 'Seu nome' : 'Tu nombre'}
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   className="pl-10 h-12 rounded-xl bg-surface-container border-outline-variant focus:border-primary"
@@ -212,14 +220,14 @@ export default function SignUpPage() {
 
             <div className="space-y-2">
               <label htmlFor="lastName" className="text-sm font-medium text-foreground">
-                Apellido
+                {language === 'en' ? 'Last name' : language === 'pt' ? 'Sobrenome' : 'Apellido'}
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="lastName"
                   type="text"
-                  placeholder="Tu apellido"
+                  placeholder={language === 'en' ? 'Your last name' : language === 'pt' ? 'Seu sobrenome' : 'Tu apellido'}
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   className="pl-10 h-12 rounded-xl bg-surface-container border-outline-variant focus:border-primary"
@@ -232,7 +240,7 @@ export default function SignUpPage() {
           {/* Institution Selector */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">
-              Institucion educativa
+              {language === 'en' ? 'Educational institution' : language === 'pt' ? 'Instituicao educacional' : 'Institucion educativa'}
             </label>
             <div className="relative">
               <button
@@ -243,7 +251,7 @@ export default function SignUpPage() {
                 <div className="flex items-center gap-3">
                   <School className="w-5 h-5 text-muted-foreground" />
                   <span className={selectedInstitution || newInstitutionName ? 'text-foreground' : 'text-muted-foreground'}>
-                    {selectedInstitution?.name || newInstitutionName || 'Selecciona o crea tu institucion'}
+                    {selectedInstitution?.name || newInstitutionName || (language === 'en' ? 'Select or create your institution' : language === 'pt' ? 'Selecione ou crie sua instituicao' : 'Selecciona o crea tu institucion')}
                   </span>
                 </div>
                 <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
@@ -257,7 +265,7 @@ export default function SignUpPage() {
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         type="text"
-                        placeholder="Buscar institucion..."
+                        placeholder={language === 'en' ? 'Search institution...' : language === 'pt' ? 'Buscar instituicao...' : 'Buscar institucion...'}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-9 h-10 rounded-lg bg-secondary/50 border-0"
@@ -271,7 +279,7 @@ export default function SignUpPage() {
                     {loadingInstitutions ? (
                       <div className="px-4 py-3 text-center text-muted-foreground">
                         <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
-                        Cargando...
+                        {language === 'en' ? 'Loading...' : language === 'pt' ? 'Carregando...' : 'Cargando...'}
                       </div>
                     ) : filteredInstitutions.length > 0 ? (
                       filteredInstitutions.map((inst) => (
@@ -293,11 +301,11 @@ export default function SignUpPage() {
                       ))
                     ) : searchQuery ? (
                       <div className="px-4 py-3 text-muted-foreground text-sm text-center">
-                        No se encontraron instituciones
+                        {language === 'en' ? 'No institutions found' : language === 'pt' ? 'Nenhuma instituicao encontrada' : 'No se encontraron instituciones'}
                       </div>
                     ) : (
                       <div className="px-4 py-3 text-muted-foreground text-sm text-center">
-                        No hay instituciones aun
+                        {language === 'en' ? 'No institutions yet' : language === 'pt' ? 'Ainda nao ha instituicoes' : 'No hay instituciones aun'}
                       </div>
                     )}
                   </div>

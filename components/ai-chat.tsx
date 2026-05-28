@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { MessageCircle, Send, Loader2, X, Sparkles, Paperclip, FileText, ImageIcon, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ChatMessage } from '@/lib/types'
+import { useLanguage } from '@/components/language-provider'
 
 interface AttachedFile {
   file: File
@@ -38,12 +39,52 @@ function FileChip({ attached, onRemove }: { attached: AttachedFile; onRemove: ()
 }
 
 export function AIChat() {
+  const { language } = useLanguage()
+  const ui = {
+    es: {
+      intro: 'Hola! Soy ClearGrade AI. Tengo acceso a tus tareas y materias para ayudarte mejor. Puedes preguntarme sobre tus pendientes, subir fotos de apuntes o documentos. Como te ayudo?',
+      filesLabel: 'Archivos',
+      assistantFallback: 'Lo siento, no pude procesar tu mensaje.',
+      genericError: 'Ocurrio un error. Intenta de nuevo.',
+      openChat: 'Abrir chat',
+      headerSubtitle: 'Con acceso a tus tareas',
+      thinking: 'Pensando...',
+      attachTitle: 'Adjuntar imagen o documento',
+      inputPlaceholder: 'Pregunta algo o arrastra un archivo...',
+      footerHint: 'Fotos, PDF, Word, TXT - max 10 MB - Enter para enviar',
+    },
+    en: {
+      intro: 'Hi! I am ClearGrade AI. I can access your tasks and subjects to help you better. Ask about pending work, upload note photos, or share documents. How can I help you?',
+      filesLabel: 'Files',
+      assistantFallback: 'Sorry, I could not process your message.',
+      genericError: 'An error occurred. Please try again.',
+      openChat: 'Open chat',
+      headerSubtitle: 'With access to your tasks',
+      thinking: 'Thinking...',
+      attachTitle: 'Attach image or document',
+      inputPlaceholder: 'Ask something or drop a file...',
+      footerHint: 'Photos, PDF, Word, TXT - max 10 MB - Press Enter to send',
+    },
+    pt: {
+      intro: 'Ola! Eu sou o ClearGrade AI. Tenho acesso as suas tarefas e materias para ajudar melhor. Voce pode perguntar sobre pendencias, enviar fotos de anotacoes ou documentos. Como posso ajudar?',
+      filesLabel: 'Arquivos',
+      assistantFallback: 'Desculpe, nao consegui processar sua mensagem.',
+      genericError: 'Ocorreu um erro. Tente novamente.',
+      openChat: 'Abrir chat',
+      headerSubtitle: 'Com acesso as suas tarefas',
+      thinking: 'Pensando...',
+      attachTitle: 'Anexar imagem ou documento',
+      inputPlaceholder: 'Pergunte algo ou arraste um arquivo...',
+      footerHint: 'Fotos, PDF, Word, TXT - max 10 MB - Enter para enviar',
+    },
+  }[language]
+
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       role: 'assistant',
-      content: 'Hola! Soy ClearGrade AI. Tengo acceso a tus tareas y materias para ayudarte mejor. Puedes preguntarme sobre tus pendientes, subir fotos de apuntes o documentos. Como te ayudo?',
+      content: ui.intro,
       timestamp: new Date()
     }
   ])
@@ -57,6 +98,13 @@ export function AIChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length !== 1 || prev[0].id !== '1' || prev[0].role !== 'assistant') return prev
+      return [{ ...prev[0], content: ui.intro }]
+    })
+  }, [ui.intro])
 
   // Auto-resize textarea
   useEffect(() => {
@@ -109,7 +157,7 @@ export function AIChat() {
     let displayContent = userContent
     if (hasFiles) {
       const names = attachedFiles.map(a => a.file.name).join(', ')
-      displayContent = userContent ? `${userContent}\n[Archivos: ${names}]` : `[Archivos: ${names}]`
+      displayContent = userContent ? `${userContent}\n[${ui.filesLabel}: ${names}]` : `[${ui.filesLabel}: ${names}]`
     }
 
     const userMessage: ChatMessage = {
@@ -148,14 +196,14 @@ export function AIChat() {
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.reply || 'Lo siento, no pude procesar tu mensaje.',
+        content: data.reply || ui.assistantFallback,
         timestamp: new Date()
       }])
     } catch {
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Ocurrio un error. Intenta de nuevo.',
+        content: ui.genericError,
         timestamp: new Date()
       }])
     } finally {
@@ -183,7 +231,7 @@ export function AIChat() {
       <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-primary shadow-lg flex items-center justify-center hover:bg-primary/90 transition-all hover:scale-105 z-50"
-        aria-label="Abrir chat"
+        aria-label={ui.openChat}
       >
         <MessageCircle className="w-6 h-6 text-primary-foreground" />
       </button>
@@ -204,7 +252,7 @@ export function AIChat() {
           </div>
           <div>
             <p className="font-semibold text-foreground">ClearGrade AI</p>
-            <p className="text-xs text-muted-foreground">Con acceso a tus tareas</p>
+            <p className="text-xs text-muted-foreground">{ui.headerSubtitle}</p>
           </div>
         </div>
         <button
@@ -232,7 +280,7 @@ export function AIChat() {
           <div className="flex justify-start">
             <div className="bg-secondary p-3 rounded-2xl rounded-bl-md flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Pensando...</span>
+              <span className="text-xs text-muted-foreground">{ui.thinking}</span>
             </div>
           </div>
         )}
@@ -256,7 +304,7 @@ export function AIChat() {
             onClick={() => fileInputRef.current?.click()}
             disabled={loading}
             className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-secondary hover:bg-secondary/70 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
-            title="Adjuntar imagen o documento"
+            title={ui.attachTitle}
           >
             <Paperclip className="w-5 h-5" />
           </button>
@@ -276,7 +324,7 @@ export function AIChat() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Pregunta algo o arrastra un archivo..."
+            placeholder={ui.inputPlaceholder}
             rows={1}
             disabled={loading}
             className="flex-1 resize-none rounded-xl bg-secondary/50 border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 leading-relaxed"
@@ -293,7 +341,7 @@ export function AIChat() {
         </div>
 
         <p className="text-xs text-muted-foreground mt-1.5 px-1">
-          Fotos, PDF, Word, TXT — max 10 MB · Enter para enviar
+          {ui.footerHint}
         </p>
       </div>
     </div>

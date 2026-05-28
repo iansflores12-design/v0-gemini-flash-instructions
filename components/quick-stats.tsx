@@ -1,4 +1,7 @@
+'use client'
+
 import { ListTodo, CalendarDays, BookOpen } from 'lucide-react'
+import { useLanguage } from '@/components/language-provider'
 
 interface QuickStatsProps {
   totalPending: number
@@ -7,27 +10,26 @@ interface QuickStatsProps {
 }
 
 export function QuickStats({ totalPending, todayCount, subjectsCount }: QuickStatsProps) {
+  const { t } = useLanguage()
+  
   return (
     <div className="grid grid-cols-3 gap-3 sm:gap-4">
       <StatCard
         icon={<CalendarDays className="w-5 h-5" />}
         value={todayCount}
-        label="Hoy"
-        // Usamos primary para el color principal
+        label={t('hoy')}
         color="bg-primary/10 text-primary"
       />
       <StatCard
         icon={<ListTodo className="w-5 h-5" />}
         value={totalPending}
-        label="Pendientes"
-        // Usamos accent que ya configuramos en el provider para que sea tu color custom
+        label={t('pendientes')}
         color="bg-accent/20 text-primary" 
       />
       <StatCard
         icon={<BookOpen className="w-5 h-5" />}
         value={subjectsCount}
-        label="Materias"
-        // CAMBIO CLAVE: Quitamos 'chart-3' (el verde) y usamos variables del sistema
+        label={t('materias')}
         color="bg-primary/10 text-primary"
       />
     </div>

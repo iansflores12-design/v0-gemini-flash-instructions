@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react'
 import { User, BookOpen, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useLanguage } from '@/components/language-provider'
 
 export default function ProfilePage() {
+  const { language } = useLanguage()
   const [profile, setProfile] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -45,7 +47,7 @@ export default function ProfilePage() {
     )
   }
 
-  const fullName = user?.user_metadata?.full_name || profile?.full_name || 'Usuario'
+  const fullName = user?.user_metadata?.full_name || profile?.full_name || (language === 'en' ? 'User' : language === 'pt' ? 'Usuario' : 'Usuario')
   const email = user?.email || ''
   const initials = fullName
     .split(' ')
@@ -62,8 +64,8 @@ export default function ProfilePage() {
             <User className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Perfil</h1>
-            <p className="text-sm text-muted-foreground">Tu cuenta y ajustes</p>
+            <h1 className="text-2xl font-bold text-foreground">{language === 'en' ? 'Profile' : language === 'pt' ? 'Perfil' : 'Perfil'}</h1>
+            <p className="text-sm text-muted-foreground">{language === 'en' ? 'Your account and settings' : language === 'pt' ? 'Sua conta e configuracoes' : 'Tu cuenta y ajustes'}</p>
           </div>
         </div>
       </header>
@@ -99,7 +101,7 @@ export default function ProfilePage() {
           className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl bg-destructive/10 text-destructive font-medium hover:bg-destructive/20 transition-colors"
         >
           <LogOut className="w-5 h-5" />
-          Cerrar sesion
+          {language === 'en' ? 'Log out' : language === 'pt' ? 'Sair' : 'Cerrar sesion'}
         </button>
       </div>
     </main>

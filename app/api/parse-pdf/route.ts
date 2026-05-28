@@ -127,23 +127,28 @@ export async function POST(req: NextRequest) {
     - IMPORTANTE sobre SECTION:
       * Si la agenda es UNICA para una sección específica (ej: "Sección A", "Sección 1", "A"), llena "section"
       * Si la agenda aplica a MULTIPLES secciones (ej: "ABCD", "EFG", "Todas las secciones"), DEJA "section" VACIO ("")
-    - DETECTA SI ES POR PARCIAL O POR SEMANA (son excluyentes):
-      * Si dice "Parcial 1, 2, 3..." o "1er, 2do, 3er parcial": usa solo "partial"
-      * Si dice "Semana 1, 2, 3..." o "Week 1, 2, 3...": usa solo "week_number"
-      * UNO O EL OTRO, NUNCA AMBOS
+    
+    - **PARCIAL ES OBLIGATORIO**: Las agendas escolares SIEMPRE están organizadas por parciales.
+      * Busca: "Parcial 1, 2, 3...", "1er, 2do, 3er parcial", "Primer parcial", "P1, P2, P3", etc.
+      * Si NO encuentras el parcial explícito, INFIERE basándote en las fechas:
+        - Parcial 1: Enero - Abril
+        - Parcial 2: Mayo - Agosto  
+        - Parcial 3: Septiembre - Diciembre
+      * El campo "partial" NUNCA puede ser null - siempre debe ser 1, 2 o 3
     
     Responde con este JSON:
     {
       "is_agenda": true,
-      "metadata": { "school": "", "grade": "", "section": "", "year": 2026, "subject": "", "partial": null, "week_number": null },
+      "metadata": { "school": "", "grade": "", "section": "", "year": 2026, "subject": "", "partial": 1 },
       "tasks": [
         { "title": "", "subject": "", "due_date": "YYYY-MM-DD", "description": "", "value": "", "materials": [] }
       ]
     }
     
-    - "partial" y "week_number" son numeros o null (nunca ambos a la vez)
+    REGLAS IMPORTANTES:
+    - "partial" es OBLIGATORIO (1, 2 o 3) - NUNCA null
     - "section" es vacio "" si aplica a multiples secciones, o el nombre de sección si es única
-    - Si no puedes detectar, dejalo como null o ""
+    - Si no puedes detectar otros campos, dejalo como null o ""
     - La materia (subject) es importante - intenta detectarla del contexto.`
 
     let result;
@@ -174,6 +179,14 @@ export async function POST(req: NextRequest) {
 
     if (parsedData.tasks && parsedData.tasks.length > 0) {
       if (!parsedData.metadata) parsedData.metadata = {}
+      
+      // Ensure partial is always set (default to inferring from current date)
+      if (!parsedData.metadata.partial) {
+        const month = new Date().getMonth() + 1
+        if (month >= 1 && month <= 4) parsedData.metadata.partial = 1
+        else if (month >= 5 && month <= 8) parsedData.metadata.partial = 2
+        else parsedData.metadata.partial = 3
+      }
 
       // Save to cache with institution
       await saveToCache(fileHash, file.name, parsedData.tasks, parsedData.metadata, institutionId)

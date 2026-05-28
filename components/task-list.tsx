@@ -10,6 +10,7 @@ import type { Task, Subject } from '@/lib/types'
 import { getTaskDescription, getTaskValue } from '@/lib/types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { useLanguage } from '@/components/language-provider'
 
 interface TaskListProps {
   tasks: Task[]
@@ -195,6 +196,7 @@ function TaskCard({
   isExpanded: boolean
   onToggleExpand: () => void
 }) {
+  const { language } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -257,11 +259,14 @@ function TaskCard({
   }
 
   // Task type badge (simplified detection)
-  const taskType = task.title.toLowerCase().includes('examen') || task.title.toLowerCase().includes('parcial') 
-    ? 'Examen' 
-    : task.title.toLowerCase().includes('proyecto')
-      ? 'Proyecto'
-      : 'Tarea'
+  const lowerTitle = task.title.toLowerCase()
+  const isExam = lowerTitle.includes('examen') || lowerTitle.includes('parcial') || lowerTitle.includes('exam') || lowerTitle.includes('prova')
+  const isProject = lowerTitle.includes('proyecto') || lowerTitle.includes('project') || lowerTitle.includes('projeto')
+  const taskType = isExam
+    ? (language === 'en' ? 'Exam' : language === 'pt' ? 'Prova' : 'Examen')
+    : isProject
+      ? (language === 'en' ? 'Project' : language === 'pt' ? 'Projeto' : 'Proyecto')
+      : (language === 'en' ? 'Task' : language === 'pt' ? 'Tarefa' : 'Tarea')
 
   return (
     <div 
@@ -292,8 +297,8 @@ function TaskCard({
               </span>
               <span className={cn(
                 'text-xs px-2 py-0.5 rounded-full font-medium',
-                taskType === 'Examen' ? 'bg-amber-500/20 text-amber-600' :
-                taskType === 'Proyecto' ? 'bg-blue-500/20 text-blue-600' :
+                isExam ? 'bg-amber-500/20 text-amber-600' :
+                isProject ? 'bg-blue-500/20 text-blue-600' :
                 'bg-secondary text-muted-foreground'
               )}>
                 {taskType}
