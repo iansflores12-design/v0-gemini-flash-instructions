@@ -116,6 +116,65 @@ export default function SettingsPage() {
     },
   }[language]
 
+  const themeText: Record<string, { es: { name: string; description: string }; en: { name: string; description: string }; pt: { name: string; description: string } }> = {
+    m3e: {
+      es: { name: 'Material 3', description: 'Paleta verde ClearGrade, color personalizable' },
+      en: { name: 'Material 3', description: 'ClearGrade green palette, customizable color' },
+      pt: { name: 'Material 3', description: 'Paleta verde ClearGrade, cor personalizavel' },
+    },
+    forest: {
+      es: { name: 'Forest & Moss', description: 'Verdes organicos para una agenda fisica moderna' },
+      en: { name: 'Forest & Moss', description: 'Organic greens for a modern physical planner' },
+      pt: { name: 'Forest & Moss', description: 'Verdes organicos para uma agenda fisica moderna' },
+    },
+    midnight: {
+      es: { name: 'Midnight Corporate', description: 'Azul profundo y profesional' },
+      en: { name: 'Midnight Corporate', description: 'Deep and professional blue' },
+      pt: { name: 'Midnight Corporate', description: 'Azul profundo e profissional' },
+    },
+    cyber: {
+      es: { name: 'Nothing Concept', description: 'Negro puro, acentos rojos y tipografia blanca' },
+      en: { name: 'Nothing Concept', description: 'Pure black, red accents, and white typography' },
+      pt: { name: 'Nothing Concept', description: 'Preto puro, acentos vermelhos e tipografia branca' },
+    },
+    sunset: {
+      es: { name: 'Sunset Soft', description: 'Calido y energetico - reduce fatiga visual' },
+      en: { name: 'Sunset Soft', description: 'Warm and energetic - reduces visual fatigue' },
+      pt: { name: 'Sunset Soft', description: 'Quente e energetico - reduz fadiga visual' },
+    },
+    mono: {
+      es: { name: 'Mono-Architectural', description: 'Minimalismo puro en escala de grises' },
+      en: { name: 'Mono-Architectural', description: 'Pure minimalism in grayscale' },
+      pt: { name: 'Mono-Architectural', description: 'Minimalismo puro em escala de cinza' },
+    },
+    ocean: {
+      es: { name: 'Ocean', description: 'Azules oceanicos y profundos' },
+      en: { name: 'Ocean', description: 'Deep ocean blues' },
+      pt: { name: 'Ocean', description: 'Azuis oceanicos e profundos' },
+    },
+    rose: {
+      es: { name: 'Rose', description: 'Tonos rosados y calidos' },
+      en: { name: 'Rose', description: 'Warm pink tones' },
+      pt: { name: 'Rose', description: 'Tons rosados e quentes' },
+    },
+    slate: {
+      es: { name: 'Slate', description: 'Gris neutro y profesional' },
+      en: { name: 'Slate', description: 'Neutral and professional gray' },
+      pt: { name: 'Slate', description: 'Cinza neutro e profissional' },
+    },
+    amber: {
+      es: { name: 'Amber', description: 'Dorado calido y energetico' },
+      en: { name: 'Amber', description: 'Warm and energetic golden tone' },
+      pt: { name: 'Amber', description: 'Dourado quente e energetico' },
+    },
+  }
+
+  const getThemeText = (id: string, fallbackName: string, fallbackDescription: string) => {
+    const text = themeText[id]
+    if (!text) return { name: fallbackName, description: fallbackDescription }
+    return text[language]
+  }
+
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<'appearance' | 'security'>('appearance')
   const [pickerColor, setPickerColor] = useState('#516435')
@@ -335,32 +394,34 @@ export default function SettingsPage() {
             <section className="space-y-4">
               <h2 className="text-xl font-medium text-foreground">{ui.presetThemes}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {themes.map((t) => (
+                {themes.map((themeOption) => {
+                  const localized = getThemeText(themeOption.id, themeOption.name, themeOption.description)
+                  return (
                   <button
-                    key={t.id}
+                    key={themeOption.id}
                     type="button"
-                    onClick={() => handleThemeChange(t.id)}
+                    onClick={() => handleThemeChange(themeOption.id)}
                     className={cn(
                       'p-5 rounded-[1.75rem] border text-left shadow-sm transition-all duration-200',
-                      theme?.id === t.id
+                      theme?.id === themeOption.id
                         ? 'border-outline-variant bg-muted/70 ring-1 ring-primary/18'
                         : 'border-border/80 bg-card hover:border-primary/25 hover:shadow-md'
                     )}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-foreground">{t.name}</h3>
-                        <p className="text-xs text-muted-foreground mt-1">{t.description}</p>
+                        <h3 className="font-semibold text-foreground">{localized.name}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">{localized.description}</p>
                       </div>
-                      {theme?.id === t.id && <Check className="w-4 h-4 text-primary/85" />}
+                      {theme?.id === themeOption.id && <Check className="w-4 h-4 text-primary/85" />}
                     </div>
                     <div className="flex gap-2">
-                      {Object.values(t.preview || {}).slice(0, 3).map((color, i) => (
+                      {Object.values(themeOption.preview || {}).slice(0, 3).map((color, i) => (
                         <div key={i} className="w-6 h-6 rounded-full shadow-sm" style={{ background: color as string }} />
                       ))}
                     </div>
                   </button>
-                ))}
+                )})}
               </div>
             </section>
 
