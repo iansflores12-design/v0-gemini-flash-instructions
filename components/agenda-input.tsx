@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createTaskWithMaterials } from '@/lib/actions'
 import type { Subject, ParsedAgendaItem } from '@/lib/types'
+import { useLanguage } from '@/components/language-provider'
 
 interface AgendaInputProps {
   subjects: Subject[]
@@ -60,6 +61,8 @@ const showNotification = (title: string, body: string) => {
 }
 
 export function AgendaInput({ subjects }: AgendaInputProps) {
+  const { t } = useLanguage()
+  
   // Queue of files to process
   const [fileQueue, setFileQueue] = useState<QueuedFile[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -350,8 +353,8 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
           <Sparkles className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1">
-          <h2 className="text-lg font-semibold text-foreground">Sube tus agendas</h2>
-          <p className="text-sm text-muted-foreground">Multiples PDFs o DOCXs</p>
+          <h2 className="text-lg font-semibold text-foreground">{t('subeAgendas')}</h2>
+          <p className="text-sm text-muted-foreground">{t('multiplesArchivos')}</p>
         </div>
         {fileQueue.length > 0 && (
           <button onClick={clearAll} className="p-2 rounded-xl hover:bg-secondary text-muted-foreground">
@@ -406,13 +409,13 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
                 <FileUp className="w-8 h-8 text-on-surface-variant" />
               </div>
               <p className="font-medium text-foreground text-center mb-1">
-                {fileQueue.length > 0 ? 'Agregar mas archivos' : 'Arrastra tus archivos aqui'}
+                {fileQueue.length > 0 ? t('agregarMasArchivos') : t('arrastraArchivos')}
               </p>
               <p className="text-sm text-muted-foreground text-center">
-                o toca para seleccionar varios
+                {t('oToca')}
               </p>
               <div className="mt-4 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                PDF o DOCX
+                {t('pdfODocx')}
               </div>
             </div>
           </div>

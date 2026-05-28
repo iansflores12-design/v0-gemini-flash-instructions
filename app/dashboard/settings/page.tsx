@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/components/theme-provider'
+import { useLanguage } from '@/components/language-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Check, Palette, Lock, X, School, ChevronDown, Search, Plus, Loader2, Save } from 'lucide-react'
+import { Check, Palette, Lock, X, School, ChevronDown, Search, Plus, Loader2, Save, Globe, Mail, Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -24,6 +25,7 @@ export default function SettingsPage() {
     customColor: activeCustomColor, 
     setCustomColor: applyCustomColor 
   } = useTheme()
+  const { language, setLanguage, t } = useLanguage()
 
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<'appearance' | 'security'>('appearance')
@@ -482,17 +484,50 @@ export default function SettingsPage() {
                     ) : profileSaved ? (
                       <>
                         <Check className="w-5 h-5 mr-2" />
-                        Guardado
+                        {t('guardado')}
                       </>
                     ) : (
                       <>
                         <Save className="w-5 h-5 mr-2" />
-                        Guardar cambios
+                        {t('guardarCambios')}
                       </>
                     )}
                   </Button>
                 </div>
               )}
+            </section>
+
+            {/* Language Section */}
+            <section className="space-y-4 border-t border-border pt-6">
+              <h2 className="text-xl font-medium text-foreground flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                {t('idioma')}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {t('seleccionaIdioma')}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {(['es', 'en', 'pt'] as const).map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => setLanguage(lang)}
+                    className={cn(
+                      'p-5 rounded-[1.75rem] border text-left shadow-sm transition-all duration-200',
+                      language === lang
+                        ? 'border-border bg-muted/70 ring-1 ring-primary/20'
+                        : 'border-border/80 bg-card hover:border-primary/25 hover:shadow-md'
+                    )}
+                  >
+                    <div className="flex items-start justify-between text-foreground">
+                      <span className="font-medium">
+                        {lang === 'es' ? 'Español' : lang === 'en' ? 'English' : 'Português'}
+                      </span>
+                      {language === lang && <Check className="w-4 h-4 text-primary" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </section>
           </div>
         )}
