@@ -26,6 +26,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
     localStorage.setItem('cleargrade-language', lang)
+    document.cookie = `cleargrade-language=${lang}; path=/; max-age=31536000; samesite=lax`
   }
 
   const t = (key: TranslationKey): string => {

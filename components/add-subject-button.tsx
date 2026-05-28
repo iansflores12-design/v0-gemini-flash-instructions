@@ -72,7 +72,7 @@ export function AddSubjectButton() {
       />
 
       <div>
-        <p className="text-sm text-muted-foreground mb-2">Color</p>
+        <p className="text-sm text-muted-foreground mb-2">{t('color')}</p>
         <div className="flex gap-2">
           {COLORS.map((c) => (
             <button

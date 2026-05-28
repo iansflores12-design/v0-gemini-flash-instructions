@@ -110,6 +110,13 @@ export const translations = {
 
     // Add subject
     nombreMateria: 'Nombre de la materia',
+    agregarMateria: 'Agregar materia',
+    nuevaMateria: 'Nueva materia',
+    color: 'Color',
+
+    // Add task
+    agregarTarea: 'Agregar tarea',
+    nuevaTarea: 'Nueva tarea',
 
     // Chat
     sinMaterias: 'Sin materias registradas',
@@ -279,6 +286,12 @@ export const translations = {
     entrega: 'Due',
 
     nombreMateria: 'Subject name',
+    agregarMateria: 'Add subject',
+    nuevaMateria: 'New subject',
+    color: 'Color',
+
+    agregarTarea: 'Add task',
+    nuevaTarea: 'New task',
 
     sinMaterias: 'No subjects registered',
     sinTareasPendientes: 'No pending tasks',
@@ -438,6 +451,12 @@ export const translations = {
     entrega: 'Entrega',
 
     nombreMateria: 'Nome da matéria',
+    agregarMateria: 'Adicionar materia',
+    nuevaMateria: 'Nova materia',
+    color: 'Cor',
+
+    agregarTarea: 'Adicionar tarefa',
+    nuevaTarea: 'Nova tarefa',
 
     sinMaterias: 'Sem matérias registradas',
     sinTareasPendientes: 'Sem tarefas pendentes',
