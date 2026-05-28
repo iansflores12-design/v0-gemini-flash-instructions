@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
+import { LanguageSwitcher } from '@/components/language-switcher'
 import { FooterEasterEgg } from '@/components/footer-easter-egg'
 import { getServerLanguage, pickLocalized } from '@/lib/localized'
 
@@ -18,9 +19,12 @@ export default async function LandingPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground transition-colors duration-300">
-      {/* Top bar with dark mode toggle */}
-      <div className="flex justify-end px-4 pt-4">
+      {/* Top bar with dark mode toggle and language switcher */}
+      <div className="flex justify-between items-center px-4 pt-4">
         <DarkModeToggle />
+        <div className="flex items-center gap-4">
+          <LanguageSwitcher />
+        </div>
       </div>
 
       {/* Hero Section */}

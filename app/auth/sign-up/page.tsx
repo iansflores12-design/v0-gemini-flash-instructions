@@ -8,6 +8,7 @@ import { Mail, Lock, User, Eye, EyeOff, Loader2, School, Plus, ChevronDown, Sear
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ClearGradeLogo } from '@/components/cleargrade-logo'
+import { LanguageSwitcher } from '@/components/language-switcher'
 import { useLanguage } from '@/components/language-provider'
 
 interface Institution {
@@ -174,6 +175,11 @@ export default function SignUpPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
+      {/* Language Switcher - Top Right */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
+
       <div className="w-full max-w-sm animate-slide-up">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
