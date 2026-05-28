@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ClearGradeLogo } from '@/components/cleargrade-logo'
 import { LanguageSwitcher } from '@/components/language-switcher'
-import { GoogleAuthButton } from '@/components/google-auth-button'
 import { useLanguage } from '@/components/language-provider'
 
 interface Institution {
@@ -462,18 +461,6 @@ export default function SignUpPage() {
             )}
           </Button>
         </form>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-sm text-muted-foreground">
-            {language === 'en' ? 'or' : language === 'pt' ? 'ou' : 'o'}
-          </span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
-
-        {/* Google Sign In Button */}
-        <GoogleAuthButton />
 
         <p className="text-center mt-6 text-muted-foreground">
           Ya tienes cuenta?{' '}

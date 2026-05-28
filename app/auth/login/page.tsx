@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ClearGradeLogo } from '@/components/cleargrade-logo'
 import { LanguageSwitcher } from '@/components/language-switcher'
-import { GoogleAuthButton } from '@/components/google-auth-button'
 import { useLanguage } from '@/components/language-provider'
 
 export default function LoginPage() {
@@ -120,18 +119,6 @@ export default function LoginPage() {
             )}
           </Button>
         </form>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-sm text-muted-foreground">
-            {language === 'en' ? 'or' : language === 'pt' ? 'ou' : 'o'}
-          </span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
-
-        {/* Google Sign In Button */}
-        <GoogleAuthButton />
 
         <div className="text-center mt-4">
           <Link href="/auth/forgot-password" className="text-sm text-muted-foreground hover:text-primary transition-colors">
