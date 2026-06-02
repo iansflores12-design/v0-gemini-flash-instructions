@@ -5,6 +5,7 @@ import { Sparkles, Loader2, Check, X, FileUp, FileText, ChevronRight, Layers, Ey
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createTaskWithMaterials } from '@/lib/actions'
+import { getFileBatchLimits } from '@/lib/limits'
 import type { Subject, ParsedAgendaItem } from '@/lib/types'
 import { useLanguage } from '@/components/language-provider'
 
@@ -63,6 +64,9 @@ const showNotification = (title: string, body: string) => {
 export function AgendaInput({ subjects }: AgendaInputProps) {
   const { t } = useLanguage()
   
+  // Batch limits based on subscription
+  const [batchLimits, setBatchLimits] = useState({ filesPerBatch: 3, delayBetweenBatches: 2000, maxFileSize: 10485760 })
+  
   // Queue of files to process
   const [fileQueue, setFileQueue] = useState<QueuedFile[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -85,6 +89,23 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
     if (isMobile()) {
       requestNotificationPermission()
     }
+    
+    // Load user's batch limits
+    const loadLimits = async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const limits = await getFileBatchLimits(user.id)
+          setBatchLimits(limits)
+        }
+      } catch (err) {
+        console.error('[v0] Error loading batch limits:', err)
+      }
+    }
+    
+    loadLimits()
   }, [])
 
   // Create preview URLs for files
@@ -176,10 +197,15 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
           } : f
         ))
       }
+      
+      // Add delay before processing next file (batch delay)
+      if (batchLimits.delayBetweenBatches > 0) {
+        await new Promise(resolve => setTimeout(resolve, batchLimits.delayBetweenBatches))
+      }
     }
     
     processNext()
-  }, [isProcessingQueue, fileQueue])
+  }, [isProcessingQueue, fileQueue, batchLimits.delayBetweenBatches, t])
 
   // Load current file's tasks when index changes
   useEffect(() => {
@@ -196,6 +222,7 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
     if (!files || files.length === 0) return
     
     const validFiles: QueuedFile[] = []
+    let skippedFiles = 0
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
@@ -203,13 +230,31 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
       const isPDF = fileName.endsWith('.pdf') || file.type === 'application/pdf'
       const isDOCX = fileName.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       
+      // Check file size limit
+      if (file.size > batchLimits.maxFileSize) {
+        skippedFiles++
+        continue
+      }
+      
       if (isPDF || isDOCX) {
         validFiles.push({ file, status: 'pending' })
       }
     }
     
     if (validFiles.length === 0) {
-      setError('Solo se permiten archivos PDF o DOCX')
+      if (skippedFiles > 0) {
+        setError(`Archivos muy grandes. Máximo: ${Math.round(batchLimits.maxFileSize / 1024 / 1024)}MB`)
+      } else {
+        setError('Solo se permiten archivos PDF o DOCX')
+      }
+      return
+    }
+    
+    // Check if we're adding more files than the batch limit allows
+    const pendingCount = fileQueue.filter(f => f.status === 'pending').length
+    if (pendingCount + validFiles.length > batchLimits.filesPerBatch) {
+      const allowedMore = batchLimits.filesPerBatch - pendingCount
+      setError(`Máximo ${batchLimits.filesPerBatch} archivos por lote. Ya tienes ${pendingCount}. Puedes agregar ${Math.max(0, allowedMore)} más.`)
       return
     }
     
