@@ -5,7 +5,8 @@ import { Sparkles, Loader2, Check, X, FileUp, FileText, ChevronRight, Layers, Ey
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createTaskWithMaterials } from '@/lib/actions'
-import { getFileBatchLimits } from '@/lib/limits'
+import { getFileBatchLimits, getUserPlan } from '@/lib/limits'
+import { LimitReachedModal } from '@/components/limit-reached-modal'
 import type { Subject, ParsedAgendaItem } from '@/lib/types'
 import { useLanguage } from '@/components/language-provider'
 
@@ -64,8 +65,14 @@ const showNotification = (title: string, body: string) => {
 export function AgendaInput({ subjects }: AgendaInputProps) {
   const { t } = useLanguage()
   
-  // Batch limits based on subscription
+  // Batch limits and user plan
   const [batchLimits, setBatchLimits] = useState({ filesPerBatch: 3, delayBetweenBatches: 2000, maxFileSize: 10485760 })
+  const [currentPlan, setCurrentPlan] = useState<'free' | 'pro' | 'ultra'>('free')
+  const [limitModal, setLimitModal] = useState<{ isOpen: boolean; type: 'files' | 'chat' | 'fileSize'; recommended: 'pro' | 'ultra' }>({
+    isOpen: false,
+    type: 'files',
+    recommended: 'pro'
+  })
   
   // Queue of files to process
   const [fileQueue, setFileQueue] = useState<QueuedFile[]>([])
@@ -97,6 +104,8 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
+          const plan = await getUserPlan(user.id)
+          setCurrentPlan(plan)
           const limits = await getFileBatchLimits(user.id)
           setBatchLimits(limits)
         }
@@ -253,6 +262,14 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
     // Check if we're adding more files than the batch limit allows
     const pendingCount = fileQueue.filter(f => f.status === 'pending').length
     if (pendingCount + validFiles.length > batchLimits.filesPerBatch) {
+      // Show limit modal
+      if (currentPlan === 'free') {
+        setLimitModal({
+          isOpen: true,
+          type: 'files',
+          recommended: 'pro'
+        })
+      }
       const allowedMore = batchLimits.filesPerBatch - pendingCount
       setError(`Máximo ${batchLimits.filesPerBatch} archivos por lote. Ya tienes ${pendingCount}. Puedes agregar ${Math.max(0, allowedMore)} más.`)
       return
@@ -402,6 +419,14 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
 
   return (
     <section className="space-y-4">
+      {/* Limit Reached Modal */}
+      <LimitReachedModal
+        isOpen={limitModal.isOpen}
+        onClose={() => setLimitModal({ ...limitModal, isOpen: false })}
+        limitType={limitModal.type}
+        currentPlan={currentPlan}
+        recommended={limitModal.recommended}
+      />
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-2xl bg-primary/12 flex items-center justify-center">
           <Sparkles className="w-5 h-5 text-primary" />

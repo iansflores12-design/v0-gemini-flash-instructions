@@ -1,151 +1,216 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { useLanguage } from '@/components/language-provider'
+import { UpgradeSection } from '@/components/upgrade-section'
+import { Loader2, Check, X, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
-import { Sparkles, Check } from 'lucide-react'
 
 export default function UpgradePage() {
-  const plans = [
-    {
-      name: 'Free',
-      price: '$0',
-      description: 'Perfecto para empezar',
-      features: [
-        '5 mensajes de chat por día',
-        'Hasta 50 tareas',
-        'Hasta 10 materias',
-        'Con anuncios'
-      ],
-      current: true
-    },
-    {
-      name: 'Pro',
-      price: '$4.99',
-      period: '/mes',
-      description: 'Para estudiantes dedicados',
-      features: [
-        '50 mensajes de chat por día',
-        'Hasta 500 tareas',
-        'Hasta 100 materias',
-        'Sin anuncios',
-        'Soporte prioritario'
-      ],
-      highlighted: true
-    },
-    {
-      name: 'Premium',
-      price: '$9.99',
-      period: '/mes',
-      description: 'Para máximo rendimiento',
-      features: [
-        '500 mensajes de chat por día',
-        'Tareas ilimitadas',
-        'Materias ilimitadas',
-        'Sin anuncios',
-        'Soporte VIP',
-        'Analytics avanzados'
-      ]
+  const { language } = useLanguage()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const planParam = searchParams.get('plan') as 'pro' | 'ultra' | null
+  
+  const [loading, setLoading] = useState(false)
+  const [userPlan, setUserPlan] = useState<'free' | 'pro' | 'ultra'>('free')
+  const [stripeUrl, setStripeUrl] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadUserPlan = async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          router.push('/auth/login')
+          return
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('subscription_plan')
+          .eq('id', user.id)
+          .single()
+
+        if (profile) {
+          setUserPlan(profile.subscription_plan || 'free')
+        }
+      } catch (err) {
+        console.error('[v0] Error loading user plan:', err)
+      }
     }
-  ]
+
+    loadUserPlan()
+  }, [router])
+
+  const handleUpgrade = async (plan: 'pro' | 'ultra') => {
+    if (userPlan !== 'free') return
+    
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No autenticado')
+
+      // Create Stripe checkout session
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan,
+          userId: user.id,
+          email: user.email
+        })
+      })
+
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || 'Error al crear sesión de pago')
+      }
+
+      const { url } = await response.json()
+      if (url) {
+        window.location.href = url
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al procesar pago')
+      setLoading(false)
+    }
+  }
+
+  const handleCancelSubscription = async () => {
+    if (!confirm(language === 'en' 
+      ? 'Are you sure you want to cancel your subscription?' 
+      : language === 'pt' 
+      ? 'Tem certeza de que deseja cancelar sua inscrição?' 
+      : '¿Estás seguro de que deseas cancelar tu suscripción?')) {
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No autenticado')
+
+      const response = await fetch('/api/stripe/cancel-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id })
+      })
+
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || 'Error al cancelar suscripción')
+      }
+
+      setSuccess(language === 'en' 
+        ? 'Subscription canceled successfully' 
+        : language === 'pt' 
+        ? 'Inscrição cancelada com sucesso' 
+        : 'Suscripción cancelada exitosamente')
+      
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cancelar')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="px-4 py-12">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 mb-4">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">Planes disponibles</span>
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        {/* Back button */}
+        <div className="mb-8">
+          <Link href="/dashboard" className="text-primary hover:underline text-sm font-medium">
+            ← {language === 'en' ? 'Back to Dashboard' : language === 'pt' ? 'Voltar ao Painel' : 'Volver al Dashboard'}
+          </Link>
+        </div>
+
+        {/* Messages */}
+        {error && (
+          <div className="mb-6 p-4 rounded-2xl bg-destructive/10 text-destructive border border-destructive/20 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">{language === 'en' ? 'Error' : language === 'pt' ? 'Erro' : 'Error'}</p>
+              <p className="text-sm">{error}</p>
             </div>
-            <h1 className="text-4xl font-bold text-foreground mb-3">Elige tu plan</h1>
-            <p className="text-lg text-muted-foreground">
-              Actualiza a Pro para desbloquear todas las funciones
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 p-4 rounded-2xl bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20 flex items-start gap-3">
+            <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">{language === 'en' ? 'Success' : language === 'pt' ? 'Sucesso' : 'Éxito'}</p>
+              <p className="text-sm">{success}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Current Plan Info */}
+        {userPlan !== 'free' && (
+          <div className="mb-12 p-6 rounded-2xl bg-primary/5 border border-primary/20">
+            <h2 className="text-xl font-bold mb-4">
+              {language === 'en' ? 'Current Plan' : language === 'pt' ? 'Plano Atual' : 'Plan Actual'}
+            </h2>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  {language === 'en' ? 'You are currently on' : language === 'pt' ? 'Você está atualmente em' : 'Actualmente estás en'}
+                </p>
+                <p className="text-2xl font-bold text-primary capitalize">{userPlan}</p>
+              </div>
+              <Button
+                variant="destructive"
+                onClick={handleCancelSubscription}
+                disabled={loading}
+              >
+                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {language === 'en' ? 'Cancel Subscription' : language === 'pt' ? 'Cancelar Inscrição' : 'Cancelar Suscripción'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Upgrade Section - Only show to free users */}
+        {userPlan === 'free' && (
+          <UpgradeSection 
+            currentPlan={userPlan}
+            onUpgradeClick={handleUpgrade}
+          />
+        )}
+
+        {/* Already Pro/Ultra Message */}
+        {userPlan !== 'free' && (
+          <div className="text-center py-12">
+            <Check className="w-12 h-12 text-primary mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">
+              {language === 'en' ? 'You are already premium!' : language === 'pt' ? 'Você já é premium!' : '¡Ya eres premium!'}
+            </h2>
+            <p className="text-muted-foreground max-w-lg mx-auto">
+              {language === 'en' 
+                ? 'Enjoy unlimited access to all features. Thank you for supporting ClearGrade!' 
+                : language === 'pt' 
+                ? 'Aproveite o acesso ilimitado a todos os recursos. Obrigado por apoiar o ClearGrade!' 
+                : '¡Disfruta de acceso ilimitado a todas las características. ¡Gracias por apoyar a ClearGrade!'}
             </p>
           </div>
-
-          {/* Pricing Cards */}
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
-            {plans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`relative rounded-2xl p-6 border transition-all ${
-                  plan.highlighted
-                    ? 'border-primary bg-primary/5 ring-2 ring-primary ring-offset-2 ring-offset-background scale-105'
-                    : 'border-border bg-card'
-                }`}
-              >
-                {plan.highlighted && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <span className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full">
-                      RECOMENDADO
-                    </span>
-                  </div>
-                )}
-
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-foreground">{plan.name}</h2>
-                  <p className="text-sm text-muted-foreground mt-1">{plan.description}</p>
-                </div>
-
-                <div className="mb-6">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-foreground">{plan.price}</span>
-                    {plan.period && <span className="text-muted-foreground">{plan.period}</span>}
-                  </div>
-                </div>
-
-                <Link href={plan.current ? '#' : `/api/stripe/checkout?plan=${plan.name.toLowerCase()}`}>
-                  <Button
-                    className="w-full mb-6"
-                    variant={plan.current ? 'outline' : 'default'}
-                    disabled={plan.current}
-                  >
-                    {plan.current ? 'Plan actual' : 'Contratar'}
-                  </Button>
-                </Link>
-
-                <div className="space-y-3">
-                  {plan.features.map((feature) => (
-                    <div key={feature} className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-foreground">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* FAQ */}
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-foreground mb-6">Preguntas frecuentes</h2>
-            {[
-              {
-                q: '¿Puedo cambiar de plan en cualquier momento?',
-                a: 'Sí, puedes cambiar o cancelar tu suscripción en cualquier momento desde tu perfil.'
-              },
-              {
-                q: '¿Necesito una tarjeta de crédito para la versión gratis?',
-                a: 'No, la versión gratis es completamente accesible sin necesidad de tarjeta de crédito.'
-              },
-              {
-                q: '¿Qué sucede cuando alcanza el limite de mensajes?',
-                a: 'En la versión gratis, tendrás que esperar hasta el próximo día. En Pro/Premium, los limites son mucho mayores.'
-              }
-            ].map((item, i) => (
-              <div key={i} className="p-4 rounded-2xl bg-card border border-border">
-                <p className="font-medium text-foreground mb-2">{item.q}</p>
-                <p className="text-sm text-muted-foreground">{item.a}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Back Button */}
-          <div className="mt-12 text-center">
-            <Link href="/dashboard">
-              <Button variant="outline">Volver al dashboard</Button>
-            </Link>
-          </div>
-        </div>
+        )}
       </div>
     </main>
   )
