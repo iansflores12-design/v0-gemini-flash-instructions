@@ -31,6 +31,7 @@ export function TaskList({ tasks, subjects = [], showViewAll }: TaskListProps) {
   const [selectedWeek, setSelectedWeek] = useState(0)
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([])
 
   // Generate weeks data based on actual task dates
   const weeks = useMemo(() => {
@@ -83,6 +84,21 @@ export function TaskList({ tasks, subjects = [], showViewAll }: TaskListProps) {
   const pendingTasks = currentWeek?.tasks.filter(t => !t.is_done) || []
   const completedTasks = currentWeek?.tasks.filter(t => t.is_done) || []
 
+  // Filter tasks by selected subjects
+  const filteredPendingTasks = selectedSubjects.length > 0 
+    ? pendingTasks.filter(t => selectedSubjects.includes(t.subject_id || ''))
+    : pendingTasks
+  const filteredCompletedTasks = selectedSubjects.length > 0 
+    ? completedTasks.filter(t => selectedSubjects.includes(t.subject_id || ''))
+    : completedTasks
+
+  // Get unique subjects from tasks in current week
+  const weekSubjects = useMemo(() => {
+    if (!currentWeek) return []
+    const uniqueSubjectIds = new Set(currentWeek.tasks.map(t => t.subject_id).filter(Boolean))
+    return subjects.filter(s => uniqueSubjectIds.has(s.id))
+  }, [currentWeek, subjects])
+
   if (tasks.length === 0) {
     return (
       <div className="p-8 text-center rounded-2xl bg-card border border-border">
@@ -124,15 +140,62 @@ export function TaskList({ tasks, subjects = [], showViewAll }: TaskListProps) {
         </div>
       </div>
 
+      {/* Subject Color Filter */}
+      {weekSubjects.length > 0 && (
+        <div className="flex gap-2 flex-wrap p-3 rounded-2xl bg-secondary/20 border border-secondary/30">
+          {weekSubjects.map(subject => (
+            <button
+              key={subject.id}
+              onClick={() => setSelectedSubjects(prev =>
+                prev.includes(subject.id)
+                  ? prev.filter(id => id !== subject.id)
+                  : [...prev, subject.id]
+              )}
+              className={cn(
+                'px-4 py-2 rounded-full text-sm font-medium transition-all border-2',
+                selectedSubjects.includes(subject.id)
+                  ? 'border-current scale-105'
+                  : 'border-transparent opacity-70 hover:opacity-100'
+              )}
+              style={{
+                backgroundColor: selectedSubjects.includes(subject.id)
+                  ? subject.color_code || '#6750A4'
+                  : `${subject.color_code || '#6750A4'}30`,
+                color: selectedSubjects.includes(subject.id)
+                  ? '#FFFFFF'
+                  : subject.color_code || '#6750A4',
+                textShadow: selectedSubjects.includes(subject.id)
+                  ? '0 1px 2px rgba(0,0,0,0.1)'
+                  : 'none'
+              }}
+            >
+              {subject.name}
+            </button>
+          ))}
+          {selectedSubjects.length > 0 && (
+            <button
+              onClick={() => setSelectedSubjects([])}
+              className="px-3 py-2 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hover:bg-secondary/30"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Tasks List */}
       <div className="space-y-3">
-        {pendingTasks.length === 0 && completedTasks.length === 0 ? (
+        {filteredPendingTasks.length === 0 && filteredCompletedTasks.length === 0 ? (
           <div className="p-6 text-center rounded-2xl bg-secondary/30">
-            <p className="text-muted-foreground">No hay tareas para {currentWeek?.label.toLowerCase()}</p>
+            <p className="text-muted-foreground">
+              {selectedSubjects.length > 0
+                ? 'No hay tareas para las materias seleccionadas'
+                : `No hay tareas para ${currentWeek?.label.toLowerCase()}`}
+            </p>
           </div>
         ) : (
           <>
-            {pendingTasks.map((task) => (
+            {filteredPendingTasks.map((task) => (
               <TaskCard
                 key={task.id}
                 task={task}
@@ -144,19 +207,19 @@ export function TaskList({ tasks, subjects = [], showViewAll }: TaskListProps) {
             ))}
 
             {/* Completed Tasks Toggle */}
-            {completedTasks.length > 0 && (
+            {filteredCompletedTasks.length > 0 && (
               <button
                 onClick={() => setShowCompleted(!showCompleted)}
                 className="w-full flex items-center justify-between p-3 rounded-xl bg-secondary/30 text-muted-foreground hover:bg-secondary/50 transition-colors"
               >
                 <span className="text-sm">
-                  {completedTasks.length} tarea{completedTasks.length > 1 ? 's' : ''} completada{completedTasks.length > 1 ? 's' : ''}
+                  {filteredCompletedTasks.length} tarea{filteredCompletedTasks.length > 1 ? 's' : ''} completada{filteredCompletedTasks.length > 1 ? 's' : ''}
                 </span>
                 <ChevronRight className={cn('w-4 h-4 transition-transform', showCompleted && 'rotate-90')} />
               </button>
             )}
 
-            {showCompleted && completedTasks.map((task) => (
+            {showCompleted && filteredCompletedTasks.map((task) => (
               <TaskCard
                 key={task.id}
                 task={task}
