@@ -138,7 +138,16 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
         
         if (!response.ok) {
           const errData = await response.json()
-          throw new Error(errData.error || 'Error al procesar')
+          // Handle institution requirement error specially
+          if (errData.requiresInstitution) {
+            setError(t('requiereInstitucion'))
+            setFileQueue(prev => prev.map((f, i) => 
+              i === pendingIndex ? { ...f, status: 'error' as const, errorMessage: errData.error } : f
+            ))
+            setIsProcessingQueue(false)
+            return
+          }
+          throw new Error(errData.error || t('errorProcesar'))
         }
         
         const data = await response.json()
