@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateText } from 'ai'
-import { google } from '@ai-sdk/google'
 import { createClient } from '@/lib/supabase/server'
 
 interface YoutubeVideo {
@@ -68,7 +66,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Generate study tips using Gemini AI
+    // Generate study tips using Gemini AI via REST API
     const languageMap = {
       es: 'Spanish',
       en: 'English',
@@ -90,12 +88,36 @@ Requirements:
 Example format:
 ["Tip 1 here", "Tip 2 here", "Tip 3 here"]`
 
-    const { text: tipsText } = await generateText({
-      model: google('gemini-1.5-flash'),
-      prompt,
-      temperature: 0.7,
-      maxTokens: 300
+    // Call Gemini API directly
+    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 300
+        }
+      }),
+      signal: AbortSignal.timeout(30000)
     })
+
+    if (!geminiResponse.ok) {
+      throw new Error(`Gemini API error: ${geminiResponse.statusText}`)
+    }
+
+    const geminiData = await geminiResponse.json()
+    const tipsText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
     // Parse AI response
     let tips: string[] = []
@@ -103,7 +125,6 @@ Example format:
       const parsed = JSON.parse(tipsText.trim())
       tips = Array.isArray(parsed) ? parsed : [tipsText]
     } catch {
-      // If parsing fails, split by newlines or use as is
       tips = tipsText.split('\n').filter(t => t.trim()).slice(0, 3)
     }
 
