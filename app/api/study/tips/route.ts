@@ -88,8 +88,8 @@ Requirements:
 Example format:
 ["Tip 1 here", "Tip 2 here", "Tip 3 here"]`
 
-    // Call Gemini API directly (gemini-2.0-flash replaces retired gemini-1.5-flash)
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+    // Call Gemini API directly (gemini-2.5-flash has better quota availability)
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
