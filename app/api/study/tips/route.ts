@@ -88,37 +88,69 @@ Requirements:
 Example format:
 ["Tip 1 here", "Tip 2 here", "Tip 3 here"]`
 
-    // Call Gemini API directly (gemini-2.5-flash has better quota availability)
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 300
-        }
-      }),
-      signal: AbortSignal.timeout(30000)
-    })
+    // Call Gemini API with automatic retry on rate-limit (429).
+    // The free tier allows only 5 req/min per model, so we retry after
+    // the delay Google specifies, then fall back to canned tips if it
+    // still fails.
+    const model = 'gemini-2.5-flash'
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
-    if (!geminiResponse.ok) {
-      const errorBody = await geminiResponse.text().catch(() => '')
-      throw new Error(`Gemini API error: ${geminiResponse.status} ${geminiResponse.statusText} - ${errorBody}`)
+    async function callGemini(): Promise<string> {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 300 },
+        }),
+        signal: AbortSignal.timeout(30000),
+      })
+
+      if (res.status === 429) {
+        const body = await res.json().catch(() => null)
+        const retryDelay = body?.error?.details?.find(
+          (d: { '@type'?: string; retryDelay?: string }) =>
+            d['@type'] === 'type.googleapis.com/google.rpc.RetryInfo'
+        )?.retryDelay
+        const seconds = retryDelay ? parseInt(retryDelay) || 5 : 5
+        await new Promise(r => setTimeout(r, (seconds + 1) * 1000))
+        const retryRes = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 300 },
+          }),
+          signal: AbortSignal.timeout(30000),
+        })
+        if (!retryRes.ok) {
+          const errBody = await retryRes.text().catch(() => '')
+          throw new Error(`Gemini API error: ${retryRes.status} ${retryRes.statusText} - ${errBody}`)
+        }
+        const retryData = await retryRes.json()
+        return retryData.candidates?.[0]?.content?.parts?.[0]?.text || ''
+      }
+
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '')
+        throw new Error(`Gemini API error: ${res.status} ${res.statusText} - ${errBody}`)
+      }
+
+      const data = await res.json()
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || ''
     }
 
-    const geminiData = await geminiResponse.json()
-    const tipsText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    let tipsText: string
+    try {
+      tipsText = await callGemini()
+    } catch (err) {
+      console.error('[v0] Gemini call failed, using fallback tips:', err)
+      tipsText = JSON.stringify([
+        `Divide "${taskTitle}" en partes pequeñas y estudia una a la vez`,
+        `Crea un mapa conceptual conectando los conceptos clave de ${subjectName}`,
+        `Practica explicando "${taskTitle}" en voz alta como si le enseñaras a alguien más`,
+      ])
+    }
 
     // Parse AI response
     let tips: string[] = []
