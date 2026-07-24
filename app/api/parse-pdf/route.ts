@@ -27,6 +27,44 @@ function cleanAndParseJSON(text: string) {
   }
 }
 
+// Transform written grades to numbers (decimo -> 10, octavo -> 8, etc.)
+function normalizeGrade(grade: string | null | undefined): string {
+  if (!grade) return ''
+  
+  const gradeMap: Record<string, string> = {
+    'primero': '1', 'primer': '1', '1ro': '1', '1er': '1',
+    'segundo': '2', '2do': '2',
+    'tercero': '3', 'tercer': '3', '3ro': '3', '3er': '3',
+    'cuarto': '4', '4to': '4',
+    'quinto': '5', '5to': '5',
+    'sexto': '6', '6to': '6',
+    'septimo': '7', 'séptimo': '7', '7mo': '7',
+    'octavo': '8', '8vo': '8',
+    'noveno': '9', '9no': '9',
+    'decimo': '10', 'décimo': '10', '10mo': '10',
+    'undecimo': '11', 'undécimo': '11', 'onceavo': '11', '11vo': '11',
+    'duodecimo': '12', 'duodécimo': '12', 'doceavo': '12', '12vo': '12',
+  }
+  
+  const normalized = grade.toLowerCase().trim()
+  
+  // Check if it's already a number
+  if (/^\d+$/.test(normalized)) return normalized
+  
+  // Check for exact match first
+  if (gradeMap[normalized]) return gradeMap[normalized]
+  
+  // Check if the grade contains a written number
+  for (const [written, num] of Object.entries(gradeMap)) {
+    if (normalized.includes(written)) {
+      // Replace the written part with number, keep the rest (like "grado", "año", etc.)
+      return normalized.replace(written, num).replace(/\s+/g, ' ').trim()
+    }
+  }
+  
+  return grade
+}
+
 function generateFileHash(buffer: Buffer): string {
   return crypto.createHash('sha256').update(buffer).digest('hex')
 }
@@ -102,8 +140,15 @@ export async function POST(req: NextRequest) {
 
     if (!file || !userId) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
 
-    // Get user's institution
+    // Get user's institution - NOW REQUIRED
     const institutionId = await getUserInstitution(userId)
+    
+    if (!institutionId) {
+      return NextResponse.json({ 
+        error: 'Debes seleccionar una institución en Configuración antes de subir agendas',
+        requiresInstitution: true 
+      }, { status: 400 })
+    }
 
     const buffer = Buffer.from(await file.arrayBuffer())
     const fileHash = generateFileHash(buffer)
@@ -186,6 +231,11 @@ export async function POST(req: NextRequest) {
         if (month >= 1 && month <= 4) parsedData.metadata.partial = 1
         else if (month >= 5 && month <= 8) parsedData.metadata.partial = 2
         else parsedData.metadata.partial = 3
+      }
+      
+      // Normalize grade (decimo -> 10, octavo -> 8, etc.)
+      if (parsedData.metadata.grade) {
+        parsedData.metadata.grade = normalizeGrade(parsedData.metadata.grade)
       }
 
       // Save to cache with institution

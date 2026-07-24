@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, ListTodo, User, MessageCircle, BookOpen } from 'lucide-react'
+import { Home, ListTodo, User, MessageCircle, BookOpen, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/components/language-provider'
 
 const navItemsConfig = [
   { href: '/dashboard', icon: Home, labelKey: 'inicio' as const },
   { href: '/dashboard/tasks', icon: ListTodo, labelKey: 'tareas' as const },
+  { href: '/dashboard/study-review', icon: Lightbulb, labelKey: 'repaso' as const },
   { href: '/dashboard/subjects', icon: BookOpen, labelKey: 'materias' as const },
   { href: '/dashboard/chat', icon: MessageCircle, labelKey: 'chat' as const },
   { href: '/dashboard/profile', icon: User, labelKey: 'perfil' as const },

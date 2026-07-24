@@ -1,45 +1,67 @@
 import { createClient } from '@/lib/supabase/server'
-import { SUBSCRIPTION_LIMITS, type UserUsage } from './types'
+import { SUBSCRIPTION_LIMITS } from './types'
+
+/**
+ * Get user's subscription plan
+ */
+export async function getUserPlan(userId: string): Promise<'free' | 'pro' | 'ultra'> {
+  const supabase = await createClient()
+  
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('subscription_plan')
+    .eq('id', userId)
+    .single()
+
+  return profile?.subscription_plan || 'free'
+}
 
 /**
  * Check if user has reached their daily chat limit
  */
-export async function checkChatLimit(userId: string): Promise<boolean> {
+export async function checkChatLimit(userId: string): Promise<{ allowed: boolean; remaining: number; limit: number }> {
   const supabase = await createClient()
-  
-  // Get user profile to determine plan
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('subscription_plan')
-    .eq('id', userId)
-    .single()
-
-  const plan = profile?.subscription_plan || 'free'
+  const plan = await getUserPlan(userId)
   const limits = SUBSCRIPTION_LIMITS[plan]
   
-  // Get today's usage from local tracking (in real implementation, use database)
+  // Get today's usage
   const today = new Date().toISOString().split('T')[0]
-  const usageKey = `chat_usage_${userId}_${today}`
   
-  // This would come from your usage tracking table in production
-  // For now, we'll return false (not limited)
-  return false
+  const { data: usage } = await supabase
+    .from('user_usage')
+    .select('chat_messages_used_today, last_chat_reset')
+    .eq('user_id', userId)
+    .single()
+
+  let messagesUsed = 0
+  
+  // Check if we need to reset (new day)
+  if (usage && usage.last_chat_reset === today) {
+    messagesUsed = usage.chat_messages_used_today
+  }
+
+  const allowed = messagesUsed < limits.chatMessagesPerDay
+  const remaining = Math.max(0, limits.chatMessagesPerDay - messagesUsed)
+  
+  return {
+    allowed,
+    remaining,
+    limit: limits.chatMessagesPerDay
+  }
 }
 
 /**
- * Get user's current subscription limits
+ * Get file batch limits based on plan
  */
-export async function getUserLimits(userId: string) {
-  const supabase = await createClient()
+export async function getFileBatchLimits(userId: string) {
+  const plan = await getUserPlan(userId)
+  const limits = SUBSCRIPTION_LIMITS[plan]
   
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('subscription_plan')
-    .eq('id', userId)
-    .single()
-
-  const plan = profile?.subscription_plan || 'free'
-  return SUBSCRIPTION_LIMITS[plan]
+  return {
+    filesPerBatch: limits.filesPerBatch,
+    delayBetweenBatches: limits.delayBetweenBatches,
+    maxFileSize: limits.maxFileSize
+  }
 }
 
 /**
@@ -49,28 +71,38 @@ export async function trackChatUsage(userId: string) {
   const supabase = await createClient()
   const today = new Date().toISOString().split('T')[0]
   
-  // Create or update usage record
   const { data: existing } = await supabase
     .from('user_usage')
     .select('*')
     .eq('user_id', userId)
-    .eq('last_chat_reset', today)
     .single()
 
   if (existing) {
-    await supabase
-      .from('user_usage')
-      .update({ chat_messages_used_today: existing.chat_messages_used_today + 1 })
-      .eq('id', existing.id)
+    // Check if it's a new day
+    if (existing.last_chat_reset === today) {
+      // Same day, increment
+      await supabase
+        .from('user_usage')
+        .update({ chat_messages_used_today: existing.chat_messages_used_today + 1 })
+        .eq('user_id', userId)
+    } else {
+      // New day, reset and set to 1
+      await supabase
+        .from('user_usage')
+        .update({ 
+          chat_messages_used_today: 1,
+          last_chat_reset: today
+        })
+        .eq('user_id', userId)
+    }
   } else {
+    // First usage
     await supabase
       .from('user_usage')
       .insert({
         user_id: userId,
         chat_messages_used_today: 1,
-        last_chat_reset: today,
-        total_tasks_created: 0,
-        total_subjects_created: 0
+        last_chat_reset: today
       })
   }
 }
@@ -92,9 +124,7 @@ export async function getUserUsage(userId: string) {
     return {
       userId,
       chatMessagesUsedToday: 0,
-      lastChatReset: today,
-      totalTasksCreated: 0,
-      totalSubjectsCreated: 0
+      lastChatReset: today
     }
   }
 
@@ -102,7 +132,7 @@ export async function getUserUsage(userId: string) {
 }
 
 /**
- * Check if user subscription is active (not expired)
+ * Check if user subscription is active
  */
 export async function isSubscriptionActive(userId: string): Promise<boolean> {
   const supabase = await createClient()
@@ -120,25 +150,4 @@ export async function isSubscriptionActive(userId: string): Promise<boolean> {
   if (!endDate) return false
   
   return new Date(endDate) > new Date()
-}
-
-/**
- * Upgrade user to pro subscription
- */
-export async function upgradeToPro(userId: string, stripeCustomerId: string) {
-  const supabase = await createClient()
-  const startDate = new Date()
-  const endDate = new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days
-
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      subscription_plan: 'pro',
-      subscription_start_date: startDate.toISOString(),
-      subscription_end_date: endDate.toISOString(),
-      stripe_customer_id: stripeCustomerId
-    })
-    .eq('id', userId)
-
-  if (error) throw error
 }

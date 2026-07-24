@@ -64,45 +64,33 @@ export interface ChatMessage {
 
 // Subscription limits configuration - 3 tiers: free, pro, ultra
 export interface SubscriptionLimits {
-  agendaPerMonth: number
-  chatRequestsPerDay: number
+  filesPerBatch: number           // FREE: 3, PRO: unlimited, ULTRA: unlimited
+  delayBetweenBatches: number    // ms - FREE: 2000, PRO: 500, ULTRA: 0
+  chatMessagesPerDay: number     // FREE: 10, PRO: 50, ULTRA: unlimited
+  maxFileSize: number            // bytes
   adsFree: boolean
-}
-
-// Usage tracking for limits
-export interface UserUsage {
-  userId: string
-  chatRequestsUsedToday: number
-  lastChatReset: string
-  agendasCreatedThisMonth: number
-  lastAgendaReset: string
-}
-
-// Admin configuration for feature toggles
-export interface AdminConfig {
-  id: string
-  subscriptionsEnabled: boolean
-  adsEnabled: boolean
-  chatLimitsEnabled: boolean
-  agendaLimitsEnabled: boolean
-  geminiApiKey: string
-  updatedAt: string
 }
 
 export const SUBSCRIPTION_LIMITS: Record<string, SubscriptionLimits> = {
   free: {
-    agendaPerMonth: 15,
-    chatRequestsPerDay: 10,
+    filesPerBatch: 3,
+    delayBetweenBatches: 2000,    // 2 segundos entre lotes
+    chatMessagesPerDay: 10,
+    maxFileSize: 10 * 1024 * 1024, // 10MB
     adsFree: false
   },
   pro: {
-    agendaPerMonth: 50,
-    chatRequestsPerDay: 100,
+    filesPerBatch: 999,            // Unlimited effectively
+    delayBetweenBatches: 500,      // 0.5 segundos entre lotes
+    chatMessagesPerDay: 50,
+    maxFileSize: 50 * 1024 * 1024, // 50MB
     adsFree: true
   },
   ultra: {
-    agendaPerMonth: 9999, // Unlimited
-    chatRequestsPerDay: 500,
+    filesPerBatch: 999,            // Unlimited effectively
+    delayBetweenBatches: 0,        // Sin delay
+    chatMessagesPerDay: 9999,      // Unlimited effectively
+    maxFileSize: 100 * 1024 * 1024, // 100MB
     adsFree: true
   }
 }

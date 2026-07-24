@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/components/theme-provider'
 import { useLanguage } from '@/components/language-provider'
+import { UpgradeSection } from '@/components/upgrade-section'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Check, Palette, Lock, X, School, ChevronDown, Search, Plus, Loader2, Save, Globe, Mail, Eye, EyeOff } from 'lucide-react'
@@ -26,6 +27,7 @@ export default function SettingsPage() {
     setCustomColor: applyCustomColor 
   } = useTheme()
   const { language, setLanguage, t } = useLanguage()
+  const [userPlan, setUserPlan] = useState<'free' | 'pro' | 'ultra'>('free')
   const ui = {
     es: {
       title: 'Configuracion',

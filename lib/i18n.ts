@@ -10,6 +10,7 @@ export const translations = {
     // Navigation
     inicio: 'Inicio',
     tareas: 'Tareas',
+    repaso: 'Repaso',
     materias: 'Materias',
     chat: 'Chat',
     perfil: 'Perfil',
@@ -46,6 +47,7 @@ export const translations = {
     errorProcesar: 'Error al procesar',
     errorDesconocido: 'Error desconocido',
     errorGuardar: 'Error al guardar',
+    requiereInstitucion: 'Debes seleccionar una institución en Configuración antes de subir agendas',
     ocultarPdf: 'Ocultar',
     verPdf: 'Ver PDF',
     vistaPrevia: 'Vista previa del documento',
@@ -208,6 +210,7 @@ export const translations = {
 
     inicio: 'Home',
     tareas: 'Tasks',
+    repaso: 'Review',
     materias: 'Subjects',
     chat: 'Chat',
     perfil: 'Profile',
@@ -241,6 +244,7 @@ export const translations = {
     errorProcesar: 'Error processing',
     errorDesconocido: 'Unknown error',
     errorGuardar: 'Error saving',
+    requiereInstitucion: 'You must select an institution in Settings before uploading schedules',
     ocultarPdf: 'Hide',
     verPdf: 'View PDF',
     vistaPrevia: 'Document preview',
@@ -387,6 +391,7 @@ export const translations = {
 
     inicio: 'Início',
     tareas: 'Tarefas',
+    repaso: 'Revisão',
     materias: 'Matérias',
     chat: 'Chat',
     perfil: 'Perfil',
@@ -420,6 +425,7 @@ export const translations = {
     errorProcesar: 'Erro ao processar',
     errorDesconocido: 'Erro desconhecido',
     errorGuardar: 'Erro ao salvar',
+    requiereInstitucion: 'Você deve selecionar uma instituição em Configurações antes de enviar cronogramas',
     ocultarPdf: 'Ocultar',
     verPdf: 'Ver PDF',
     vistaPrevia: 'Pré-visualização do documento',

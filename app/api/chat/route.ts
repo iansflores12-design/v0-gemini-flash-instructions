@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAdminConfig } from '@/lib/admin-config'
-import { SUBSCRIPTION_LIMITS } from '@/lib/types'
+import { checkChatLimit, trackChatUsage } from '@/lib/limits'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -197,41 +197,19 @@ export async function POST(req: NextRequest) {
       }, { status: 401 })
     }
 
-    // Check limits
-    const config = await getAdminConfig()
-    if (config?.chatLimitsEnabled) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('subscription_plan')
-        .eq('id', user.id)
-        .single()
-
-      const plan = profile?.subscription_plan || 'free'
-      const limits = SUBSCRIPTION_LIMITS[plan]
-
-      const { data: usage } = await supabase
-        .from('user_usage')
-        .select('chatRequestsUsedToday, lastChatReset')
-        .eq('userId', user.id)
-        .single()
-
-      const today = new Date().toDateString()
-      const isNewDay = !usage?.lastChatReset || new Date(usage.lastChatReset).toDateString() !== today
-      const chatUsed = isNewDay ? 0 : (usage?.chatRequestsUsedToday || 0)
-
-      if (chatUsed >= limits.chatRequestsPerDay) {
-        return NextResponse.json({
-          reply: `Has alcanzado tu limite de ${limits.chatRequestsPerDay} mensajes por dia.`,
-          limitExceeded: true
-        })
-      }
-
-      await supabase.from('user_usage').upsert({
-        userId: user.id,
-        chatRequestsUsedToday: isNewDay ? 1 : chatUsed + 1,
-        lastChatReset: new Date().toISOString()
-      })
+    // Check chat limits
+    const chatLimitCheck = await checkChatLimit(user.id)
+    if (!chatLimitCheck.allowed) {
+      return NextResponse.json({
+        reply: `Has alcanzado tu límite de ${chatLimitCheck.limit} mensajes por día. Vuelve mañana o mejora a Pro/Ultra.`,
+        limitExceeded: true,
+        remaining: 0,
+        limit: chatLimitCheck.limit
+      }, { status: 429 })
     }
+
+    // Track chat usage
+    await trackChatUsage(user.id)
 
     // Fetch user context
     const userContext = await getUserContext(user.id)
