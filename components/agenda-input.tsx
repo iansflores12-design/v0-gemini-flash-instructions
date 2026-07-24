@@ -5,7 +5,6 @@ import { Sparkles, Loader2, Check, X, FileUp, FileText, ChevronRight, Layers, Ey
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createTaskWithMaterials } from '@/lib/actions'
-import { getFileBatchLimits, getUserPlan } from '@/lib/limits'
 import { LimitReachedModal } from '@/components/limit-reached-modal'
 import type { Subject, ParsedAgendaItem } from '@/lib/types'
 import { useLanguage } from '@/components/language-provider'
@@ -100,14 +99,25 @@ export function AgendaInput({ subjects }: AgendaInputProps) {
     // Load user's batch limits
     const loadLimits = async () => {
       try {
+        const response = await fetch('/api/user/limits')
+        if (!response.ok) throw new Error('Failed to fetch limits')
+        
+        const limits = await response.json()
+        setBatchLimits(limits)
+        
+        // Get user plan from profile
         const { createClient } = await import('@/lib/supabase/client')
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
-          const plan = await getUserPlan(user.id)
-          setCurrentPlan(plan)
-          const limits = await getFileBatchLimits(user.id)
-          setBatchLimits(limits)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('subscription_plan')
+            .eq('id', user.id)
+            .single()
+          if (profile) {
+            setCurrentPlan(profile.subscription_plan || 'free')
+          }
         }
       } catch (err) {
         console.error('[v0] Error loading batch limits:', err)
