@@ -3,7 +3,6 @@ import { getTasks, getSubjects } from '@/lib/actions'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { AgendaInput } from '@/components/agenda-input'
 import { UpcomingTasks } from '@/components/upcoming-tasks'
-import { StudyReviewSection } from '@/components/study-review-section'
 import { QuickStats } from '@/components/quick-stats'
 import { getServerLanguage, pickLocalized } from '@/lib/localized'
 
@@ -43,13 +42,6 @@ export default async function DashboardPage() {
             {pickLocalized(language, { es: 'Proximas tareas', en: 'Upcoming tasks', pt: 'Proximas tarefas' })}
           </h2>
           <UpcomingTasks tasks={pendingTasks} subjects={subjects} />
-        </section>
-
-        <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">
-            {pickLocalized(language, { es: 'Repaso', en: 'Study Review', pt: 'Revisão de Estudo' })}
-          </h2>
-          <StudyReviewSection tasks={pendingTasks} subjects={subjects} />
         </section>
       </div>
     </main>

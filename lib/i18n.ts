@@ -10,6 +10,7 @@ export const translations = {
     // Navigation
     inicio: 'Inicio',
     tareas: 'Tareas',
+    repaso: 'Repaso',
     materias: 'Materias',
     chat: 'Chat',
     perfil: 'Perfil',
@@ -209,6 +210,7 @@ export const translations = {
 
     inicio: 'Home',
     tareas: 'Tasks',
+    repaso: 'Review',
     materias: 'Subjects',
     chat: 'Chat',
     perfil: 'Profile',
@@ -389,6 +391,7 @@ export const translations = {
 
     inicio: 'Início',
     tareas: 'Tarefas',
+    repaso: 'Revisão',
     materias: 'Matérias',
     chat: 'Chat',
     perfil: 'Perfil',
