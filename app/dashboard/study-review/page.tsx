@@ -1,36 +1,97 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import { getTasks, getSubjects } from '@/lib/actions'
-import { BookOpen, Lightbulb, Video, CheckCircle2 } from 'lucide-react'
-import { getServerLanguage, pickLocalized } from '@/lib/localized'
+import { BookOpen, Lightbulb, Video, CheckCircle2, Loader2 } from 'lucide-react'
+import { pickLocalized } from '@/lib/localized'
+import { useLanguage } from '@/components/language-provider'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
-export default async function StudyReviewPage() {
-  const language = await getServerLanguage()
-  const [tasks, subjects] = await Promise.all([
-    getTasks(),
-    getSubjects()
-  ])
+interface TaskWithTips {
+  id: string
+  title: string
+  description?: string
+  subject_id?: string
+  tips: string[]
+  videos: Array<{ title: string; url: string; channel: string }>
+  loading: boolean
+}
+
+export default function StudyReviewPage() {
+  const { language } = useLanguage()
+  const [tasks, setTasks] = useState<any[]>([])
+  const [subjects, setSubjects] = useState<any[]>([])
+  const [tasksWithTips, setTasksWithTips] = useState<TaskWithTips[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [tasksData, subjectsData] = await Promise.all([
+          getTasks(),
+          getSubjects()
+        ])
+        
+        setTasks(tasksData)
+        setSubjects(subjectsData)
+        
+        // Initialize tasks with tips loading
+        const pending = tasksData.filter((t: any) => !t.is_done)
+        setTasksWithTips(pending.map((task: any) => ({
+          ...task,
+          tips: [],
+          videos: [],
+          loading: true
+        })))
+
+        // Fetch tips for each task
+        for (const task of pending) {
+          const subject = subjectsData.find((s: any) => s.id === task.subject_id)
+          const response = await fetch('/api/study/tips', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subjectName: subject?.name || 'General',
+              taskTitle: task.title,
+              language: language === 'pt' ? 'pt' : language === 'en' ? 'en' : 'es',
+              gradeLevel: 8
+            })
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            setTasksWithTips((prev) =>
+              prev.map((t) =>
+                t.id === task.id
+                  ? {
+                      ...t,
+                      tips: data.tips || [],
+                      videos: data.videos || [],
+                      loading: false
+                    }
+                  : t
+              )
+            )
+          } else {
+            setTasksWithTips((prev) =>
+              prev.map((t) =>
+                t.id === task.id ? { ...t, loading: false } : t
+              )
+            )
+          }
+        }
+      } catch (err) {
+        console.error('[v0] Error loading study data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [language])
 
   const pendingTasks = tasks.filter(t => !t.is_done)
-
-  // Study tips by language
-  const studyTips = {
-    es: [
-      'Técnica Pomodoro: Estudia 25 minutos, descansa 5 minutos',
-      'Resumen activo: Escribe con tus propias palabras lo aprendido',
-      'Enseña a otros: Explica el tema como si enseñaras a alguien'
-    ],
-    en: [
-      'Pomodoro Technique: Study for 25 minutes, rest for 5 minutes',
-      'Active Summary: Write what you learned in your own words',
-      'Teach Others: Explain the topic as if you were teaching someone'
-    ],
-    pt: [
-      'Técnica Pomodoro: Estude 25 minutos, descanse 5 minutos',
-      'Resumo Ativo: Escreva o que aprendeu com suas próprias palavras',
-      'Ensine Outros: Explique o tópico como se estivesse ensinando'
-    ]
-  }
 
   return (
     <main className="min-h-screen">
@@ -42,54 +103,33 @@ export default async function StudyReviewPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              {pickLocalized(language, { es: 'Repaso', en: 'Study Review', pt: 'Revisão de Estudo' })}
+              {language === 'en' ? 'Study Review' : language === 'pt' ? 'Revisão de Estudo' : 'Repaso'}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {pendingTasks.length} {pickLocalized(language, { es: 'tareas para repasar', en: 'tasks to review', pt: 'tarefas para revisar' })}
+              {pendingTasks.length} {language === 'en' ? 'tasks to review' : language === 'pt' ? 'tarefas para revisar' : 'tareas para repasar'}
             </p>
           </div>
         </div>
       </header>
 
       <div className="px-4 space-y-6 pb-6">
-        {/* Study Tips Section */}
-        <section>
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Lightbulb className="w-5 h-5 text-accent" />
-            {pickLocalized(language, { es: 'Consejos de Estudio', en: 'Study Tips', pt: 'Dicas de Estudo' })}
-          </h2>
-          <div className="grid gap-3">
-            {studyTips[language === 'pt' ? 'pt' : language === 'en' ? 'en' : 'es'].map((tip, idx) => (
-              <div key={idx} className="p-4 rounded-2xl bg-card border border-border hover:border-primary/50 transition-colors">
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold text-primary">{idx + 1}</span>
-                  </div>
-                  <p className="text-sm text-foreground leading-relaxed">{tip}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Tasks to Review */}
-        {pendingTasks.length > 0 && (
+        {/* Tasks to Review with AI Tips */}
+        {tasksWithTips.length > 0 ? (
           <section>
             <h2 className="text-lg font-semibold text-foreground mb-4">
-              {pickLocalized(language, { es: 'Tareas para Repasar', en: 'Tasks to Review', pt: 'Tarefas para Revisar' })}
+              {language === 'en' ? 'Study Materials' : language === 'pt' ? 'Materiais de Estudo' : 'Materiales de Estudio'}
             </h2>
-            <div className="space-y-3">
-              {pendingTasks.slice(0, 10).map((task) => {
+            <div className="space-y-4">
+              {tasksWithTips.map((task) => {
                 const subject = subjects.find(s => s.id === task.subject_id)
-                const searchQuery = encodeURIComponent(`${task.title} ${subject?.name || ''}`)
-                const youtubeUrl = `https://www.youtube.com/results?search_query=${searchQuery}`
 
                 return (
                   <div
                     key={task.id}
-                    className="p-4 rounded-2xl bg-card border border-border hover:border-primary/50 transition-all"
+                    className="p-4 rounded-2xl bg-card border border-border hover:border-primary/50 transition-all overflow-hidden"
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    {/* Task Header */}
+                    <div className="flex items-start justify-between gap-4 mb-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <div
@@ -97,7 +137,7 @@ export default async function StudyReviewPage() {
                             style={{ backgroundColor: subject?.color_code || '#6750A4' }}
                           />
                           <span className="text-xs font-medium text-muted-foreground">
-                            {subject?.name || 'Sin materia'}
+                            {subject?.name || language === 'en' ? 'No subject' : language === 'pt' ? 'Sem matéria' : 'Sin materia'}
                           </span>
                         </div>
                         <h3 className="font-semibold text-foreground mb-1">{task.title}</h3>
@@ -105,46 +145,75 @@ export default async function StudyReviewPage() {
                           <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
                         )}
                       </div>
-                      <Link href={youtubeUrl} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="sm" className="flex items-center gap-2">
-                          <Video className="w-4 h-4" />
-                          {language === 'en' ? 'Search Videos' : language === 'pt' ? 'Buscar Vídeos' : 'Buscar Vídeos'}
-                        </Button>
-                      </Link>
                     </div>
 
-                    {/* Quick Study Tips for this task */}
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">
-                        {pickLocalized(language, { es: 'Consejos para este tema:', en: 'Tips for this topic:', pt: 'Dicas para este tópico:' })}
-                      </p>
-                      <ul className="text-xs text-muted-foreground space-y-1">
-                        <li>• {pickLocalized(language, { es: 'Haz preguntas sobre cada punto principal', en: 'Ask questions about each main point', pt: 'Faça perguntas sobre cada ponto principal' })}</li>
-                        <li>• {pickLocalized(language, { es: 'Crea ejemplos prácticos del tema', en: 'Create practical examples of the topic', pt: 'Crie exemplos práticos do tópico' })}</li>
-                        <li>• {pickLocalized(language, { es: 'Repasa regularmente después del estudio', en: 'Review regularly after studying', pt: 'Revise regularmente após estudar' })}</li>
-                      </ul>
-                    </div>
+                    {/* AI-Generated Tips */}
+                    {task.loading ? (
+                      <div className="py-6 flex items-center justify-center gap-2 text-muted-foreground">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm">{language === 'en' ? 'Generating tips...' : language === 'pt' ? 'Gerando dicas...' : 'Generando consejos...'}</span>
+                      </div>
+                    ) : task.tips.length > 0 ? (
+                      <>
+                        {/* Study Tips */}
+                        <div className="mb-4 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                            <Lightbulb className="w-4 h-4 text-primary" />
+                            {language === 'en' ? 'Study Tips for this topic' : language === 'pt' ? 'Dicas de estudo para este tópico' : 'Consejos de estudio para este tema'}
+                          </p>
+                          <ul className="text-sm text-foreground space-y-1">
+                            {task.tips.map((tip, idx) => (
+                              <li key={idx} className="flex gap-2">
+                                <span className="text-primary font-medium">•</span>
+                                <span>{tip}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        {/* YouTube Videos */}
+                        {task.videos.length > 0 && (
+                          <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                            <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                              <Video className="w-4 h-4 text-blue-500" />
+                              {language === 'en' ? 'Recommended Videos' : language === 'pt' ? 'Vídeos Recomendados' : 'Vídeos Recomendados'}
+                            </p>
+                            <div className="space-y-2">
+                              {task.videos.map((video, idx) => (
+                                <Link
+                                  key={idx}
+                                  href={video.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block p-2 rounded-lg bg-background border border-border hover:border-blue-500 transition-colors group"
+                                >
+                                  <p className="text-xs font-medium text-foreground group-hover:text-blue-500 transition-colors">{video.title}</p>
+                                  <p className="text-xs text-muted-foreground">{video.channel}</p>
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="py-4 text-center text-muted-foreground text-sm">
+                        {language === 'en' ? 'Unable to generate tips' : language === 'pt' ? 'Impossível gerar dicas' : 'No se pudieron generar consejos'}
+                      </div>
+                    )}
                   </div>
                 )
               })}
-              {pendingTasks.length > 10 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  {pendingTasks.length - 10} {pickLocalized(language, { es: 'tareas más', en: 'more tasks', pt: 'mais tarefas' })}
-                </p>
-              )}
             </div>
           </section>
-        )}
-
-        {/* No Tasks Message */}
-        {pendingTasks.length === 0 && (
+        ) : (
+          /* No Tasks Message */
           <div className="text-center py-12">
             <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-4 opacity-50" />
             <p className="text-foreground font-semibold mb-2">
-              {pickLocalized(language, { es: '¡Sin tareas pendientes!', en: 'No pending tasks!', pt: 'Sem tarefas pendentes!' })}
+              {language === 'en' ? 'No pending tasks!' : language === 'pt' ? 'Sem tarefas pendentes!' : '¡Sin tareas pendientes!'}
             </p>
             <p className="text-muted-foreground text-sm">
-              {pickLocalized(language, { es: 'Agrega tareas para empezar a repasar', en: 'Add tasks to start reviewing', pt: 'Adicione tarefas para começar a revisar' })}
+              {language === 'en' ? 'Add tasks to start reviewing' : language === 'pt' ? 'Adicione tarefas para começar a revisar' : 'Agrega tareas para empezar a repasar'}
             </p>
           </div>
         )}
