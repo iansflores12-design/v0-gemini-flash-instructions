@@ -88,8 +88,8 @@ Requirements:
 Example format:
 ["Tip 1 here", "Tip 2 here", "Tip 3 here"]`
 
-    // Call Gemini API directly
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    // Call Gemini API directly (gemini-2.0-flash replaces retired gemini-1.5-flash)
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -113,7 +113,8 @@ Example format:
     })
 
     if (!geminiResponse.ok) {
-      throw new Error(`Gemini API error: ${geminiResponse.statusText}`)
+      const errorBody = await geminiResponse.text().catch(() => '')
+      throw new Error(`Gemini API error: ${geminiResponse.status} ${geminiResponse.statusText} - ${errorBody}`)
     }
 
     const geminiData = await geminiResponse.json()
