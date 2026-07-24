@@ -89,7 +89,7 @@ Example format:
 ["Tip 1 here", "Tip 2 here", "Tip 3 here"]`
 
     // Call Gemini API directly
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
