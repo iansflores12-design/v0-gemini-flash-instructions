@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getGeminiApiKey } from '@/lib/gemini'
 
 interface YoutubeVideo {
   title: string
@@ -56,12 +57,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Check if API key is configured
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
+    // Resolve Gemini API key (user's BYOK or env fallback)
+    const apiKey = await getGeminiApiKey()
     if (!apiKey) {
-      console.error('[v0] Missing GOOGLE_GENERATIVE_AI_API_KEY')
+      console.error('[v0] Missing Gemini API key')
       return NextResponse.json(
-        { error: 'API key not configured' },
+        { error: 'No hay una clave API de Gemini configurada. Ve a Configuración y agrega tu clave de Google AI Studio.' },
         { status: 500 }
       )
     }

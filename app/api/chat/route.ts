@@ -5,7 +5,7 @@ import { checkChatLimit, trackChatUsage } from '@/lib/limits'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
-const GEMINI_API_KEY = 'AIzaSyAoiN0VsY3AjLhyZZg08Y9Dnp7052h8TIY'
+import { getGeminiApiKey } from '@/lib/gemini'
 
 // Convert file buffer to base64 for Gemini
 function bufferToBase64(buffer: ArrayBuffer): string {
@@ -79,7 +79,8 @@ async function callGeminiWithFiles(
   prompt: string,
   userContext: string,
   history: { role: string; content: string }[],
-  files: { data: string; mimeType: string; name: string }[]
+  files: { data: string; mimeType: string; name: string }[],
+  apiKey: string
 ): Promise<string> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 45000)
@@ -121,7 +122,7 @@ async function callGeminiWithFiles(
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -211,6 +212,15 @@ export async function POST(req: NextRequest) {
     // Track chat usage
     await trackChatUsage(user.id)
 
+    // Resolve Gemini API key (user's BYOK or env fallback)
+    const apiKey = await getGeminiApiKey()
+    if (!apiKey) {
+      return NextResponse.json({
+        success: false,
+        reply: 'No hay una clave API de Gemini configurada. Ve a Configuración y agrega tu clave de Google AI Studio.'
+      }, { status: 500 })
+    }
+
     // Fetch user context
     const userContext = await getUserContext(user.id)
 
@@ -219,7 +229,8 @@ export async function POST(req: NextRequest) {
       message || (files.length > 0 ? 'Analiza este archivo.' : ''),
       userContext,
       history,
-      files
+      files,
+      apiKey
     )
 
     return NextResponse.json({ reply, success: true })

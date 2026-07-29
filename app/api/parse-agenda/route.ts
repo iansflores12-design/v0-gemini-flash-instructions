@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { NextResponse } from 'next/server'
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+import { getGeminiApiKey } from '@/lib/gemini'
 
 export async function POST(request: Request) {
   try {
@@ -11,11 +10,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No text provided' }, { status: 400 })
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
+    const apiKey = await getGeminiApiKey()
+    if (!apiKey) {
+      return NextResponse.json({
+        error: 'No hay una clave API de Gemini configurada. Ve a Configuración y agrega tu clave de Google AI Studio.'
+    }, { status: 500 })
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' })
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' })
     
     const prompt = `Analiza el siguiente texto de una agenda escolar o lista de tareas y extrae la información estructurada.
 

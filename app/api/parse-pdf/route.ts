@@ -3,9 +3,7 @@ import mammoth from 'mammoth'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
-
-const GEMINI_API_KEY = 'AIzaSyBthuQfIIQ2SQJtar_uslJiGoWqAr7UeCw'
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
+import { getGeminiApiKeyForUser } from '@/lib/gemini'
 const MODEL_NAME = 'gemini-2.5-flash'
 
 const supabase = createClient(
@@ -157,7 +155,16 @@ export async function POST(req: NextRequest) {
     const cached = await checkCache(fileHash, institutionId)
     if (cached) return NextResponse.json({ ...cached })
 
+    // 2. Resolve API key (user's BYOK or env fallback)
+    const apiKey = await getGeminiApiKeyForUser(userId)
+    if (!apiKey) {
+      return NextResponse.json({
+        error: 'No hay una clave API de Gemini configurada. Ve a Configuración y agrega tu clave de Google AI Studio.'
+      }, { status: 500 })
+    }
+
     const isPDF = file.name.toLowerCase().endsWith('.pdf')
+    const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({ model: MODEL_NAME })
 
     const prompt = `Analiza este documento y determina si es una AGENDA ESCOLAR.
