@@ -57,12 +57,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Resolve Gemini API key (user's BYOK or env fallback)
-    const apiKey = await getGeminiApiKey()
+    // Master Gemini API key from server env
+    const apiKey = getGeminiApiKey()
     if (!apiKey) {
       console.error('[v0] Missing Gemini API key')
       return NextResponse.json(
-        { error: 'No hay una clave API de Gemini configurada. Ve a Configuración y agrega tu clave de Google AI Studio.' },
+        { error: 'La clave API de Gemini no está configurada en el servidor.' },
         { status: 500 }
       )
     }

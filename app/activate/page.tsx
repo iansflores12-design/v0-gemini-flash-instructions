@@ -14,8 +14,7 @@ export default function ActivatePage() {
     subscriptionsEnabled: false,
     adsEnabled: false,
     chatLimitsEnabled: false,
-    agendaLimitsEnabled: false,
-    geminiApiKey: ''
+    agendaLimitsEnabled: false
   })
   
   const [saving, setSaving] = useState(false)
@@ -213,19 +212,6 @@ export default function ActivatePage() {
                   }`} />
                 </button>
               </div>
-            </div>
-
-            {/* Gemini API Key */}
-            <div className="p-4 rounded-xl bg-secondary border border-border">
-              <label className="block text-sm font-medium text-foreground mb-2">API Key Gemini</label>
-              <input
-                type="password"
-                value={config.geminiApiKey}
-                onChange={(e) => setConfig(prev => ({ ...prev, geminiApiKey: e.target.value }))}
-                className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground text-sm"
-                placeholder="AIzaSy..."
-              />
-              <p className="text-xs text-muted-foreground mt-2">Tu API key de Google Gemini</p>
             </div>
 
             {/* Summary */}

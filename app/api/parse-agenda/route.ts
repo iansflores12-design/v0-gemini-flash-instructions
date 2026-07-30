@@ -10,11 +10,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No text provided' }, { status: 400 })
     }
 
-    const apiKey = await getGeminiApiKey()
+    const apiKey = getGeminiApiKey()
     if (!apiKey) {
-      return NextResponse.json({
-        error: 'No hay una clave API de Gemini configurada. Ve a Configuración y agrega tu clave de Google AI Studio.'
-    }, { status: 500 })
+      return NextResponse.json({ error: 'La clave API de Gemini no está configurada en el servidor.' }, { status: 500 })
     }
 
     const genAI = new GoogleGenerativeAI(apiKey)

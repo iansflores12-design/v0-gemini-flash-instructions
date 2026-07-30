@@ -3,7 +3,7 @@ import mammoth from 'mammoth'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
-import { getGeminiApiKeyForUser } from '@/lib/gemini'
+import { getGeminiApiKey } from '@/lib/gemini'
 const MODEL_NAME = 'gemini-2.5-flash'
 
 const supabase = createClient(
@@ -155,12 +155,11 @@ export async function POST(req: NextRequest) {
     const cached = await checkCache(fileHash, institutionId)
     if (cached) return NextResponse.json({ ...cached })
 
-    // 2. Resolve API key (user's BYOK or env fallback)
-    const apiKey = await getGeminiApiKeyForUser(userId)
+    // 2. Master Gemini API key from server env
+    const apiKey = getGeminiApiKey()
     if (!apiKey) {
       return NextResponse.json({
-        error: 'No hay una clave API de Gemini configurada. Ve a Configuración y agrega tu clave de Google AI Studio.'
-      }, { status: 500 })
+        error: 'La clave API de Gemini no está configurada en el servidor.' }, { status: 500 })
     }
 
     const isPDF = file.name.toLowerCase().endsWith('.pdf')

@@ -212,12 +212,12 @@ export async function POST(req: NextRequest) {
     // Track chat usage
     await trackChatUsage(user.id)
 
-    // Resolve Gemini API key (user's BYOK or env fallback)
-    const apiKey = await getGeminiApiKey()
+    // Master Gemini API key from server env
+    const apiKey = getGeminiApiKey()
     if (!apiKey) {
       return NextResponse.json({
         success: false,
-        reply: 'No hay una clave API de Gemini configurada. Ve a Configuración y agrega tu clave de Google AI Studio.'
+        reply: 'La clave API de Gemini no está configurada en el servidor.'
       }, { status: 500 })
     }
 
